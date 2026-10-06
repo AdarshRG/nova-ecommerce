@@ -3,10 +3,9 @@
 // ARCHITECTURE ROLE: Interactive Quantity Selector & CTA Button for Product Detail Pages
 //
 // ROUTE MAP & COMPONENT FLOW:
-//   1. Included inside dynamic route `app/products/[slug]/page.tsx`.
-//   2. Marked with `'use client'` because it manages local component state (`quantity`, `added`)
-//      and dispatches items to `store/useCartStore.ts`.
-//   3. When user clicks "+", "-" or "Add to Cart", local state updates and global Zustand store updates.
+//   1. Rendered inside dynamic route `app/products/[slug]/page.tsx`.
+//   2. Manages quantity selection state (`quantity`) and checkmark feedback state (`added`).
+//   3. Calls `addItem(product, quantity)` from `useCartStore` which fires global Toast.
 // ==============================================================================
 
 "use client";
@@ -20,15 +19,10 @@ interface AddToCartButtonProps {
 }
 
 export default function AddToCartButton({ product }: AddToCartButtonProps) {
-  // `useCartStore`: Extracts `addItem` action
-  const { addItem } = useCartStore();
-
-  // Local React State: Manages selected item quantity and button success animation feedback
+  const { addItem, openCart } = useCartStore();
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
 
-  // EVENT HANDLER: handleAdd()
-  // WHY USED: Adds product with selected quantity into Zustand store and shows 2-second checkmark feedback.
   const handleAdd = () => {
     addItem(product, quantity);
     setAdded(true);
@@ -36,36 +30,46 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
   };
 
   return (
-    <div className="flex flex-col sm:flex-row gap-4 w-full">
-      {/* Quantity Selector (- / +) */}
-      <div className="flex items-center border border-slate-800 bg-slate-900 rounded-xl p-1 w-fit">
+    <div className="flex flex-col sm:flex-row items-stretch gap-4 w-full">
+      {/* Quantity Stepper */}
+      <div className="flex items-center justify-between border border-slate-800 bg-slate-950 rounded-2xl p-1.5 w-full sm:w-36">
         <button
           onClick={() => setQuantity(Math.max(1, quantity - 1))}
-          className="w-10 h-10 flex items-center justify-center font-bold text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+          className="w-9 h-9 flex items-center justify-center font-black text-slate-400 hover:text-white hover:bg-slate-800/80 rounded-xl transition-colors text-sm"
+          aria-label="Decrease Quantity"
         >
           -
         </button>
-        <span className="w-10 text-center font-bold text-white text-sm">
+        <span className="text-sm font-black text-white px-2">
           {quantity}
         </span>
         <button
           onClick={() => setQuantity(quantity + 1)}
-          className="w-10 h-10 flex items-center justify-center font-bold text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+          className="w-9 h-9 flex items-center justify-center font-black text-slate-400 hover:text-white hover:bg-slate-800/80 rounded-xl transition-colors text-sm"
+          aria-label="Increase Quantity"
         >
           +
         </button>
       </div>
 
-      {/* Primary Add To Cart Button */}
+      {/* Main Add to Bag Button */}
       <button
         onClick={handleAdd}
-        className={`flex-1 py-3.5 px-6 rounded-xl font-bold text-sm text-white transition-all shadow-lg flex items-center justify-center gap-2 ${
+        className={`flex-1 py-4 px-8 rounded-2xl font-black text-xs uppercase tracking-wider text-white transition-all shadow-xl flex items-center justify-center gap-2 active:scale-95 ${
           added
             ? "bg-emerald-600 shadow-emerald-600/30"
             : "bg-violet-600 hover:bg-violet-500 shadow-violet-600/30 hover:scale-[1.01]"
         }`}
       >
-        {added ? "✓ Added to Cart!" : "🛒 Add to Cart"}
+        <span>{added ? "✓ Added to Bag!" : `+ Add to Bag — $${(product.price * quantity).toFixed(2)}`}</span>
+      </button>
+
+      {/* Quick View Bag Direct Action */}
+      <button
+        onClick={openCart}
+        className="px-5 py-4 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-800 font-bold text-xs text-slate-300 transition-colors"
+      >
+        View Bag 🛍️
       </button>
     </div>
   );

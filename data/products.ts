@@ -1,5 +1,12 @@
 import { Product, Category } from "../types/product";
 
+// ==============================================================================
+// CATALOG DATA FILE: data/products.ts
+// ARCHITECTURE ROLE: In-memory database catalog and product lookup helpers.
+//   - Updated for Day 3 with original MSRP prices (discount calculations),
+//     stock levels (inventory badges), and promotional tags.
+// ==============================================================================
+
 export const CATEGORIES: Category[] = [
   {
     id: "1",
@@ -7,7 +14,7 @@ export const CATEGORIES: Category[] = [
     slug: "audio-tech",
     itemCount: 24,
     gradient: "from-blue-600 to-indigo-700",
-    description: "High-fidelity wireless sound and active noise cancellation gear.",
+    description: "High-fidelity wireless sound, spatial audio, and hybrid active noise cancellation gear.",
   },
   {
     id: "2",
@@ -15,7 +22,7 @@ export const CATEGORIES: Category[] = [
     slug: "wearables",
     itemCount: 18,
     gradient: "from-purple-600 to-pink-600",
-    description: "Next-gen smartwatches with continuous health and fitness tracking.",
+    description: "Next-gen smartwatches with continuous ECG, SpO2, and dual-frequency GPS tracking.",
   },
   {
     id: "3",
@@ -23,7 +30,7 @@ export const CATEGORIES: Category[] = [
     slug: "smart-home",
     itemCount: 32,
     gradient: "from-emerald-600 to-teal-700",
-    description: "Ambient lighting and smart home automation devices.",
+    description: "Ambient RGB dynamic lighting, screen-sync bars, and smart home automation devices.",
   },
   {
     id: "4",
@@ -31,7 +38,7 @@ export const CATEGORIES: Category[] = [
     slug: "accessories",
     itemCount: 45,
     gradient: "from-amber-500 to-orange-600",
-    description: "Ergonomic EDC backpacks, wireless docks, and cases.",
+    description: "Weatherproof EDC tech backpacks, wireless charging docks, and protective gear.",
   },
 ];
 
@@ -42,9 +49,10 @@ export const PRODUCTS: Product[] = [
     name: "NOVA Sonic Wireless Headphones",
     category: "Audio & Tech",
     price: 249.99,
+    originalPrice: 299.99,
     rating: 4.9,
     reviewCount: 142,
-    imageBg: "bg-slate-800",
+    imageBg: "bg-slate-900",
     icon: "🎧",
     description:
       "Engineered for acoustic purity. Features active hybrid noise cancellation, custom 40mm titanium drivers, and an astonishing 40-hour continuous battery life.",
@@ -60,8 +68,10 @@ export const PRODUCTS: Product[] = [
       "Weight": "250g",
       "Connectivity": "Bluetooth 5.4 / USB-C / 3.5mm",
     },
-    tag: "Best Seller",
+    tag: "BEST SELLER",
+    badge: "SAVE $50",
     inStock: true,
+    stockCount: 14,
   },
   {
     id: "p2",
@@ -69,9 +79,10 @@ export const PRODUCTS: Product[] = [
     name: "NOVA Pulse Smartwatch Pro",
     category: "Wearables",
     price: 199.5,
+    originalPrice: 239.0,
     rating: 4.8,
     reviewCount: 98,
-    imageBg: "bg-indigo-900",
+    imageBg: "bg-slate-900",
     icon: "⌚",
     description:
       "Advanced health monitoring on your wrist. Features an Ultra HD AMOLED sapphire glass display, ECG heart monitoring, SPO2 sensor, and dual-frequency GPS.",
@@ -87,8 +98,10 @@ export const PRODUCTS: Product[] = [
       "Water Resistance": "50 Meters (5 ATM)",
       "Sensors": "ECG, SpO2, Accelerometer, Gyro",
     },
-    tag: "New Arrival",
+    tag: "NEW ARRIVAL",
+    badge: "15% OFF",
     inStock: true,
+    stockCount: 6,
   },
   {
     id: "p3",
@@ -96,9 +109,10 @@ export const PRODUCTS: Product[] = [
     name: "NOVA Lumina Ambient Light Bar",
     category: "Smart Home",
     price: 89.0,
+    originalPrice: 109.0,
     rating: 4.7,
     reviewCount: 76,
-    imageBg: "bg-zinc-800",
+    imageBg: "bg-slate-900",
     icon: "💡",
     description:
       "Transform your workspace with intelligent dynamic backlighting. Syncs with screen colors, music beats, and voice commands.",
@@ -114,7 +128,10 @@ export const PRODUCTS: Product[] = [
       "Compatibility": "Monitors 24 - 34 inches",
       "Connectivity": "Wi-Fi 2.4GHz + Bluetooth",
     },
+    tag: "POPULAR",
+    badge: "HOT DEAL",
     inStock: true,
+    stockCount: 22,
   },
   {
     id: "p4",
@@ -122,9 +139,10 @@ export const PRODUCTS: Product[] = [
     name: "NOVA Core Ergonomic Backpack",
     category: "Accessories",
     price: 119.99,
+    originalPrice: 149.99,
     rating: 4.9,
     reviewCount: 215,
-    imageBg: "bg-stone-800",
+    imageBg: "bg-slate-900",
     icon: "🎒",
     description:
       "Built for tech professionals on the go. Weather-proof Cordura fabric, padded 16-inch laptop compartment, and hidden RFID anti-theft pocket.",
@@ -140,7 +158,10 @@ export const PRODUCTS: Product[] = [
       "Laptop Fit": "Up to 16-inch MacBook Pro",
       "Material": "Waterproof Cordura Nylon",
     },
+    tag: "TOP RATED",
+    badge: "LIMITED",
     inStock: true,
+    stockCount: 4,
   },
 ];
 
@@ -148,3 +169,4 @@ export const PRODUCTS: Product[] = [
 export function getProductBySlug(slug: string): Product | undefined {
   return PRODUCTS.find((p) => p.slug === slug);
 }
+
