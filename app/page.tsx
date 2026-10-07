@@ -5,8 +5,8 @@
 // ROUTE MAP & COMPONENT COMPOSITION:
 //   Visiting http://localhost:3000/ executes this file.
 //   1. React Server Component (RSC) running on Node.js server.
-//   2. Day 3 Update: Integrates `<Toast />` component for global client notifications,
-//      interactive search/filter catalog section, and polished e-commerce UI design.
+//   2. Day 4 Update: Integrates `<ClientOverlays />` managing Cart Drawer, Wishlist Drawer,
+//      Checkout Validation Modal, and Toast notifications, maintaining zero client JS penalty for page structure.
 // ==============================================================================
 
 import React from "react";
@@ -19,9 +19,8 @@ import HeroSection from "../components/home/HeroSection";
 import CategoriesGrid from "../components/home/CategoriesGrid";
 import FeaturedProducts from "../components/home/FeaturedProducts";
 
-// Client State Overlays:
-import CartDrawer from "../components/cart/CartDrawer";
-import Toast from "../components/ui/Toast";
+// Master Client Overlays Container:
+import ClientOverlays from "../components/layout/ClientOverlays";
 
 // Data Source:
 import { CATEGORIES, PRODUCTS } from "../data/products";
@@ -29,11 +28,8 @@ import { CATEGORIES, PRODUCTS } from "../data/products";
 export default function Home() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 flex flex-col font-sans">
-      {/* Global Interactive Toast Notification (Client Component) */}
-      <Toast />
-
-      {/* Slide-over Cart Drawer (Client Component) */}
-      <CartDrawer />
+      {/* Global Client Overlays (Toast, Cart Drawer, Wishlist Drawer, Checkout Modal) */}
+      <ClientOverlays />
 
       {/* Announcement Promo Banner */}
       <div className="bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 py-2.5 px-4 text-center text-xs font-bold tracking-wide">

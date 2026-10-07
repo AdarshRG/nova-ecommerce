@@ -1,14 +1,11 @@
 // ==============================================================================
 // FILE: components/cart/CartDrawer.tsx
-// ARCHITECTURE ROLE: Interactive Enterprise Client Shopping Bag (Slide-Over Drawer)
+// ARCHITECTURE ROLE: Interactive Client Shopping Bag (Slide-Over Drawer)
 //
 // ROUTE MAP & COMPONENT FLOW:
 //   1. Rendered inside `app/page.tsx` and `app/products/[slug]/page.tsx`.
-//   2. Day 3 Enhancements:
-//      - Handles hydration safety guard for Zustand `localStorage` persistence.
-//      - Features dynamic Free Shipping progress bar ($99 target).
-//      - Supports promo code discounts (e.g. `NOVANEXT` for $15 OFF).
-//      - Calculates subtotal, shipping fee, discount, and final total.
+//   2. Day 4 Update: Accepts `onOpenCheckout` callback prop to open `<CheckoutModal />`.
+//   3. Features dynamic Free Shipping progress bar ($99 goal) and promo code discount handling.
 // ==============================================================================
 
 "use client";
@@ -16,7 +13,11 @@
 import React, { useState, useEffect } from "react";
 import { useCartStore } from "../../store/useCartStore";
 
-export default function CartDrawer() {
+interface CartDrawerProps {
+  onOpenCheckout?: () => void;
+}
+
+export default function CartDrawer({ onOpenCheckout }: CartDrawerProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [promoInput, setPromoInput] = useState("");
   const [promoError, setPromoError] = useState("");
@@ -37,10 +38,9 @@ export default function CartDrawer() {
     getFinalPrice,
     getFreeShippingRemaining,
     getFreeShippingPercent,
-    getTotalItems
+    getTotalItems,
   } = useCartStore();
 
-  // Hydration safety: set `isMounted` to true after client mounts
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -67,6 +67,13 @@ export default function CartDrawer() {
     }
   };
 
+  const handleCheckoutClick = () => {
+    closeCart();
+    if (onOpenCheckout) {
+      onOpenCheckout();
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Dimmed Overlay Backdrop */}
@@ -78,7 +85,7 @@ export default function CartDrawer() {
       {/* Slide-Over Drawer Shell */}
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
         <div className="w-screen max-w-md bg-slate-950 border-l border-slate-800/80 text-slate-50 flex flex-col shadow-2xl">
-          {/* Drawer Header */}
+          {/* Header */}
           <div className="p-6 border-b border-slate-800/80 flex items-center justify-between bg-slate-900/60">
             <div className="flex items-center gap-2.5">
               <span className="text-xl">🛍️</span>
@@ -96,7 +103,7 @@ export default function CartDrawer() {
             </button>
           </div>
 
-          {/* Free Shipping Progress Indicator */}
+          {/* Free Shipping Progress Bar */}
           {items.length > 0 && (
             <div className="bg-slate-900 p-4 border-b border-slate-800/80">
               <div className="flex justify-between items-center text-xs font-semibold mb-1.5">
@@ -124,7 +131,7 @@ export default function CartDrawer() {
             </div>
           )}
 
-          {/* Cart Item Scrollable List */}
+          {/* Items List */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
             {items.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-6">
@@ -148,14 +155,12 @@ export default function CartDrawer() {
                   key={item.product.id}
                   className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex gap-4 items-center shadow-md hover:border-slate-700/80 transition-all"
                 >
-                  {/* Item Image / Graphic */}
                   <div
                     className={`w-16 h-16 rounded-xl ${item.product.imageBg} flex items-center justify-center text-3xl shrink-0 border border-slate-800`}
                   >
                     {item.product.icon}
                   </div>
 
-                  {/* Details */}
                   <div className="flex-1 min-w-0">
                     <span className="text-[10px] font-bold text-violet-400 uppercase tracking-wider">
                       {item.product.category}
@@ -167,14 +172,12 @@ export default function CartDrawer() {
                       ${item.product.price.toFixed(2)} each
                     </p>
 
-                    {/* Quantity Controls */}
                     <div className="flex items-center gap-2 mt-2.5">
                       <button
                         onClick={() =>
                           updateQuantity(item.product.id, item.quantity - 1)
                         }
                         className="w-7 h-7 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-xs font-bold flex items-center justify-center text-slate-300 transition-colors"
-                        aria-label="Decrease Quantity"
                       >
                         -
                       </button>
@@ -186,19 +189,16 @@ export default function CartDrawer() {
                           updateQuantity(item.product.id, item.quantity + 1)
                         }
                         className="w-7 h-7 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-xs font-bold flex items-center justify-center text-slate-300 transition-colors"
-                        aria-label="Increase Quantity"
                       >
                         +
                       </button>
                     </div>
                   </div>
 
-                  {/* Subtotal & Delete */}
                   <div className="flex flex-col items-end justify-between self-stretch">
                     <button
                       onClick={() => removeItem(item.product.id)}
-                      className="text-slate-500 hover:text-red-400 text-xs transition-colors p-1"
-                      aria-label="Remove item"
+                      className="text-slate-500 hover:text-rose-400 text-xs transition-colors p-1"
                     >
                       🗑️
                     </button>
@@ -211,7 +211,7 @@ export default function CartDrawer() {
             )}
           </div>
 
-          {/* Footer Order Summary & Checkout Section */}
+          {/* Footer Pricing Summary & Checkout Button */}
           {items.length > 0 && (
             <div className="p-6 border-t border-slate-800 bg-slate-900/90 space-y-4">
               {/* Promo Code Input Form */}
@@ -246,7 +246,7 @@ export default function CartDrawer() {
                   </form>
                 )}
                 {promoError && (
-                  <p className="text-[11px] text-red-400 mt-1 font-medium">
+                  <p className="text-[11px] text-rose-400 mt-1 font-medium">
                     {promoError}
                   </p>
                 )}
@@ -289,8 +289,11 @@ export default function CartDrawer() {
                 >
                   Clear Bag
                 </button>
-                <button className="flex-1 py-3.5 bg-violet-600 hover:bg-violet-500 font-black text-white text-xs rounded-xl shadow-lg shadow-violet-600/30 transition-all active:scale-95 flex items-center justify-center gap-2">
-                  <span>Checkout Now</span>
+                <button
+                  onClick={handleCheckoutClick}
+                  className="flex-1 py-3.5 bg-violet-600 hover:bg-violet-500 font-black text-white text-xs rounded-xl shadow-lg shadow-violet-600/30 transition-all active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <span>Proceed to Checkout</span>
                   <span>→</span>
                 </button>
               </div>

@@ -5,14 +5,9 @@
 // ROUTE MAP & DATA FLOW:
 //   User enters URL: http://localhost:3000/products/nova-sonic-wireless
 //   1. Next.js App Router matches route pattern `/products/[slug]` to this file.
-//   2. Next.js extracts `params` object containing `{ slug: "nova-sonic-wireless" }`.
-//   3. `generateStaticParams()` runs at build time (`npm run build`) to find all product slugs
-//      from `data/products.ts` and pre-render static HTML pages (SSG - Static Site Generation).
-//   4. Day 3 Enhancements:
-//      - Features MSRP original price strike-through & discount percentage pills.
-//      - Displays real-time inventory count status ("Only 14 left in stock").
-//      - Includes "Recommended Hardware" related products section.
-//      - Integrates global `<Toast />` component for interactive cart feedback.
+//   2. `generateStaticParams()` pre-renders dynamic routes into static HTML at build time (SSG).
+//   3. Day 4 Update: Integrates `<ClientOverlays />` managing Cart Drawer, Wishlist Drawer,
+//      Checkout Validation Modal, and Toast notifications.
 // ==============================================================================
 
 import React from "react";
@@ -22,10 +17,9 @@ import { notFound } from "next/navigation";
 // Layout & UI Components
 import Header from "../../../components/layout/Header";
 import Footer from "../../../components/layout/Footer";
-import CartDrawer from "../../../components/cart/CartDrawer";
 import AddToCartButton from "../../../components/product/AddToCartButton";
 import ProductCard from "../../../components/home/ProductCard";
-import Toast from "../../../components/ui/Toast";
+import ClientOverlays from "../../../components/layout/ClientOverlays";
 
 // Data Access
 import { getProductBySlug, PRODUCTS } from "../../../data/products";
@@ -63,11 +57,8 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 flex flex-col font-sans">
-      {/* Global Interactive Toast Notification Alert */}
-      <Toast />
-
-      {/* Slide-over Cart Drawer (Client Component) */}
-      <CartDrawer />
+      {/* Global Client Overlays (Toast, Cart Drawer, Wishlist Drawer, Checkout Modal) */}
+      <ClientOverlays />
 
       {/* Persistent Navigation Header */}
       <Header />
@@ -90,7 +81,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
         {/* Product Showcase Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
-          {/* Left Product Visual Showcase Box */}
+          {/* Left Product Visual Box */}
           <div className="bg-gradient-to-b from-slate-900 via-slate-900/90 to-slate-950 border border-slate-800 rounded-3xl p-12 flex flex-col items-center justify-center relative overflow-hidden group shadow-2xl">
             {/* Promotional Badges */}
             <div className="absolute top-6 left-6 right-6 flex justify-between items-center z-10">
@@ -159,12 +150,12 @@ export default async function ProductDetailPage({ params }: PageProps) {
               )}
             </div>
 
-            {/* Product Narrative Description */}
+            {/* Product Description */}
             <p className="text-slate-300 text-sm leading-relaxed">
               {product.description}
             </p>
 
-            {/* Key Highlights Grid */}
+            {/* Key Features List */}
             <div className="space-y-2 py-2">
               <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                 Key Hardware Features
