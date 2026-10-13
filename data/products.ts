@@ -1,12 +1,22 @@
+// ==============================================================================
+// FILE: data/products.ts
+// ARCHITECTURE ROLE: In-Memory Database Catalog & Product Lookup Functions
+//
+// ROUTE MAP & COMPONENT USAGE:
+//   1. Provides mock database arrays (`CATEGORIES`, `PRODUCTS`) imported across:
+//      - Homepage (`app/page.tsx`, `HeroSection.tsx`, `FeaturedProducts.tsx`)
+//      - Dynamic Product Detail Pages (`app/products/[slug]/page.tsx`)
+//      - Search Modal (`components/catalog/SearchModal.tsx`)
+//      - Wishlist & Cart Drawers (`WishlistDrawer.tsx`, `CartDrawer.tsx`)
+//   2. Day 5 Update: Includes realistic verified customer review arrays (`Review[]`)
+//      with rating scores, helpful votes, and author avatars.
+// ==============================================================================
+
 import { Product, Category } from "../types/product";
 
-// ==============================================================================
-// CATALOG DATA FILE: data/products.ts
-// ARCHITECTURE ROLE: In-memory database catalog and product lookup helpers.
-//   - Updated for Day 3 with original MSRP prices (discount calculations),
-//     stock levels (inventory badges), and promotional tags.
-// ==============================================================================
-
+/**
+ * Array of store category departments.
+ */
 export const CATEGORIES: Category[] = [
   {
     id: "1",
@@ -42,6 +52,9 @@ export const CATEGORIES: Category[] = [
   },
 ];
 
+/**
+ * Main mock products catalog array with full specs, features, prices, and reviews.
+ */
 export const PRODUCTS: Product[] = [
   {
     id: "p1",
@@ -72,6 +85,44 @@ export const PRODUCTS: Product[] = [
     badge: "SAVE $50",
     inStock: true,
     stockCount: 14,
+    reviews: [
+      {
+        id: "rev-101",
+        author: "Marcus Vance",
+        avatar: "MV",
+        rating: 5,
+        date: "2026-09-24",
+        title: "Phenomenal Noise Cancellation & Soundstage",
+        comment:
+          "The noise cancellation easily rivals top tier flagship brands. The bass is clean and warm without muddying the mids. 40-hour battery life is 100% accurate!",
+        verifiedPurchase: true,
+        helpfulCount: 34,
+      },
+      {
+        id: "rev-102",
+        author: "Sarah Jenkins",
+        avatar: "SJ",
+        rating: 5,
+        date: "2026-09-18",
+        title: "Super Comfortable For All-Day Office Work",
+        comment:
+          "I wear these for 8+ hours a day during remote calls. The memory foam cushions don't squeeze your head, and the mic quality is crisp.",
+        verifiedPurchase: true,
+        helpfulCount: 19,
+      },
+      {
+        id: "rev-103",
+        author: "David Kim",
+        avatar: "DK",
+        rating: 4,
+        date: "2026-09-05",
+        title: "Great Build Quality, Sleek Carrying Case",
+        comment:
+          "Premium materials all around. The touch controls take a day to get used to, but spatial audio mode sounds amazing when watching movies.",
+        verifiedPurchase: true,
+        helpfulCount: 12,
+      },
+    ],
   },
   {
     id: "p2",
@@ -102,6 +153,32 @@ export const PRODUCTS: Product[] = [
     badge: "15% OFF",
     inStock: true,
     stockCount: 6,
+    reviews: [
+      {
+        id: "rev-201",
+        author: "Elena Rostova",
+        avatar: "ER",
+        rating: 5,
+        date: "2026-09-29",
+        title: "Incredible AMOLED Display & Battery Life",
+        comment:
+          "Screen is bright even under direct sunlight. Battery lasts easily 6 days on a single charge with continuous heart rate monitoring enabled.",
+        verifiedPurchase: true,
+        helpfulCount: 22,
+      },
+      {
+        id: "rev-202",
+        author: "Brian Miller",
+        avatar: "BM",
+        rating: 4,
+        date: "2026-09-12",
+        title: "Precise GPS tracking for trail running",
+        comment:
+          "Dual frequency GPS locked onto satellites in under 5 seconds during my mountain trail run. Very satisfied with the health metrics.",
+        verifiedPurchase: true,
+        helpfulCount: 15,
+      },
+    ],
   },
   {
     id: "p3",
@@ -132,6 +209,20 @@ export const PRODUCTS: Product[] = [
     badge: "HOT DEAL",
     inStock: true,
     stockCount: 22,
+    reviews: [
+      {
+        id: "rev-301",
+        author: "Chris Taylor",
+        avatar: "CT",
+        rating: 5,
+        date: "2026-09-20",
+        title: "Must-have setup upgrade for night coding",
+        comment:
+          "Reduces eye strain completely when working at night. Screen color sync works flawlessly with zero lag!",
+        verifiedPurchase: true,
+        helpfulCount: 18,
+      },
+    ],
   },
   {
     id: "p4",
@@ -162,11 +253,28 @@ export const PRODUCTS: Product[] = [
     badge: "LIMITED",
     inStock: true,
     stockCount: 4,
+    reviews: [
+      {
+        id: "rev-401",
+        author: "Jessica Martinez",
+        avatar: "JM",
+        rating: 5,
+        date: "2026-09-27",
+        title: "Best EDC Tech Backpack I've Owned",
+        comment:
+          "Fits my 16-inch laptop, tablet, mechanical keyboard, and cables cleanly. Water resistance saved my gear during a heavy rainstorm last week.",
+        verifiedPurchase: true,
+        helpfulCount: 41,
+      },
+    ],
   },
 ];
 
-// Helper Function: Find Product by Slug
+/**
+ * Lookup Helper: Finds a product object matching a given URL slug.
+ * @param slug Dynamic route parameter string e.g. "nova-sonic-wireless"
+ * @returns Product object if found, or undefined if not matched.
+ */
 export function getProductBySlug(slug: string): Product | undefined {
   return PRODUCTS.find((p) => p.slug === slug);
 }
-

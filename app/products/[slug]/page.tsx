@@ -6,8 +6,8 @@
 //   User enters URL: http://localhost:3000/products/nova-sonic-wireless
 //   1. Next.js App Router matches route pattern `/products/[slug]` to this file.
 //   2. `generateStaticParams()` pre-renders dynamic routes into static HTML at build time (SSG).
-//   3. Day 4 Update: Integrates `<ClientOverlays />` managing Cart Drawer, Wishlist Drawer,
-//      Checkout Validation Modal, and Toast notifications.
+//   3. Day 5 Update: Integrates `<ProductReviews />` for customer rating breakdown & submission form,
+//      and `<ClientOverlays />` for global overlays & search modals.
 // ==============================================================================
 
 import React from "react";
@@ -15,10 +15,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 // Layout & UI Components
-import Header from "../../../components/layout/Header";
 import Footer from "../../../components/layout/Footer";
 import AddToCartButton from "../../../components/product/AddToCartButton";
 import ProductCard from "../../../components/home/ProductCard";
+import ProductReviews from "../../../components/product/ProductReviews";
 import ClientOverlays from "../../../components/layout/ClientOverlays";
 
 // Data Access
@@ -57,11 +57,8 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 flex flex-col font-sans">
-      {/* Global Client Overlays (Toast, Cart Drawer, Wishlist Drawer, Checkout Modal) */}
+      {/* Global Client Overlays (Header, SearchModal, Toast, CartDrawer, WishlistDrawer, CheckoutModal) */}
       <ClientOverlays />
-
-      {/* Persistent Navigation Header */}
-      <Header />
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-10">
         {/* Breadcrumb Navigation Bar */}
@@ -195,7 +192,10 @@ export default async function ProductDetailPage({ params }: PageProps) {
           </div>
         </div>
 
-        {/* Recommended Products Carousel Section */}
+        {/* Customer Product Reviews Component */}
+        <ProductReviews product={product} />
+
+        {/* Recommended Products Section */}
         <section className="mt-20 pt-12 border-t border-slate-900">
           <div className="mb-8">
             <span className="text-xs font-bold text-violet-400 uppercase tracking-widest bg-violet-950/60 px-3 py-1 rounded-full border border-violet-800/50">
