@@ -3,10 +3,14 @@
 // ARCHITECTURE ROLE: Enterprise Interactive Product Card UI Component
 //
 // ROUTE MAP & COMPONENT FLOW:
-//   1. Rendered inside `<FeaturedProducts />` or catalog grid arrays.
-//   2. Subscribes to `useCartStore` (`addItem`) and `useWishlistStore` (`toggleWishlist`, `isInWishlist`).
-//   3. Day 4 Update: Features interactive heart toggle (❤️ / 🤍) for persistent user wishlist management.
-//   4. Prevents card navigation triggering when clicking heart button or "Add to Bag" button.
+//   1. Rendered inside `<FeaturedProducts />`, category pages, and search/recommendation grids.
+//   2. Subscribes to:
+//      - `useCartStore`: Adds product to shopping bag (`addItem(product)`).
+//      - `useWishlistStore`: Toggles favorite status (`toggleWishlist(product.id)`).
+//      - `useCompareStore`: Toggles side-by-side comparison (`toggleCompare(product)`).
+//   3. Event Isolation:
+//      - Clicking the card body navigates to `/products/[slug]`.
+//      - Clicking "❤️" (Wishlist), "⇄ Compare" (Comparison), or "+ Add to Bag" halts link redirection via `e.preventDefault()`.
 // ==============================================================================
 
 "use client";
@@ -16,55 +20,66 @@ import Link from "next/link";
 import { Product } from "../../types/product";
 import { useCartStore } from "../../store/useCartStore";
 import { useWishlistStore } from "../../store/useWishlistStore";
+import { useCompareStore } from "../../store/useCompareStore";
 
 interface ProductCardProps {
   product: Product;
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
+  // Client hydration flag to prevent server/client storage rehydration mismatches
   const [isMounted, setIsMounted] = useState(false);
+
+  // Store Hooks
   const { addItem } = useCartStore();
   const { toggleWishlist, isInWishlist } = useWishlistStore();
+  const { toggleCompare, isInCompare } = useCompareStore();
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
+  // Compute active state flags safely after client mounts
   const isFavorited = isMounted ? isInWishlist(product.id) : false;
+  const isCompared = isMounted ? isInCompare(product.id) : false;
 
-  // Calculate discount percentage if original MSRP exists
+  // Calculate percentage discount from MSRP original price
   const discountPercent = product.originalPrice
     ? Math.round(
         ((product.originalPrice - product.price) / product.originalPrice) * 100
       )
     : 0;
 
-  // EVENT HANDLER: handleAddToCart(e)
-  // Halts card navigation redirect while adding item and firing Toast alert.
+  // EVENT HANDLER: Add product to shopping bag
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     addItem(product);
   };
 
-  // EVENT HANDLER: handleToggleWishlist(e)
-  // Halts card navigation redirect while toggling favorite status.
+  // EVENT HANDLER: Toggle product in wishlist
   const handleToggleWishlist = (e: React.MouseEvent) => {
     e.preventDefault();
     toggleWishlist(product.id);
   };
 
+  // EVENT HANDLER: Toggle product in comparison matrix
+  const handleToggleCompare = (e: React.MouseEvent) => {
+    e.preventDefault();
+    toggleCompare(product);
+  };
+
   return (
     <div className="group bg-slate-900/90 border border-slate-800 hover:border-slate-700/80 rounded-2xl overflow-hidden flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:shadow-violet-950/20 hover:-translate-y-1">
-      {/* Clickable Card Link Body */}
+      {/* Clickable Card Link Body navigating to PDP `/products/[slug]` */}
       <Link href={`/products/${product.slug}`} className="block flex-1 flex flex-col">
-        {/* Product Visual Box */}
+        {/* Visual Graphic Header Box */}
         <div className="relative h-52 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 p-5 flex items-center justify-center border-b border-slate-800/60 overflow-hidden">
-          {/* Ambient Glow */}
+          {/* Subtle Ambient Radial Glow */}
           <div className="absolute inset-0 bg-violet-600/5 group-hover:bg-violet-600/10 transition-colors duration-300" />
 
-          {/* Badges Bar */}
+          {/* Top Badges & Actions Overlay */}
           <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-10">
-            {/* Tag Badge */}
+            {/* Tag Badge (BEST SELLER / NEW ARRIVAL) */}
             {product.tag ? (
               <span className="bg-violet-600/90 backdrop-blur-md text-white text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-lg border border-violet-400/30 shadow-sm">
                 {product.tag}
@@ -73,26 +88,43 @@ export default function ProductCard({ product }: ProductCardProps) {
               <span />
             )}
 
-            {/* Interactive Wishlist Heart Button */}
-            <button
-              onClick={handleToggleWishlist}
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all shadow-md active:scale-90 ${
-                isFavorited
-                  ? "bg-rose-500/20 text-rose-500 border border-rose-500/40"
-                  : "bg-slate-950/80 text-slate-400 hover:text-white border border-slate-800"
-              }`}
-              aria-label="Save to Wishlist"
-            >
-              {isFavorited ? "❤️" : "🤍"}
-            </button>
+            {/* Quick Action Buttons: Compare + Wishlist Heart */}
+            <div className="flex items-center gap-1.5">
+              {/* Compare Toggle Button */}
+              <button
+                onClick={handleToggleCompare}
+                className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all shadow-sm active:scale-95 flex items-center gap-1 ${
+                  isCompared
+                    ? "bg-violet-600 text-white border border-violet-400"
+                    : "bg-slate-950/80 text-slate-400 hover:text-white border border-slate-800"
+                }`}
+                title={isCompared ? "Remove from comparison" : "Add to comparison"}
+              >
+                <span>⇄</span>
+                <span className="hidden sm:inline">{isCompared ? "Compared" : "Compare"}</span>
+              </button>
+
+              {/* Wishlist Heart Toggle Button */}
+              <button
+                onClick={handleToggleWishlist}
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs transition-all shadow-md active:scale-90 ${
+                  isFavorited
+                    ? "bg-rose-500/20 text-rose-500 border border-rose-500/40"
+                    : "bg-slate-950/80 text-slate-400 hover:text-white border border-slate-800"
+                }`}
+                aria-label="Save to Wishlist"
+              >
+                {isFavorited ? "❤️" : "🤍"}
+              </button>
+            </div>
           </div>
 
-          {/* Product Icon Visual Graphic */}
+          {/* Product Center Visual Icon */}
           <div className="text-6xl transform group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300 z-0">
             {product.icon}
           </div>
 
-          {/* Stock Availability Pill */}
+          {/* Bottom Left Stock Inventory Availability Pill */}
           <div className="absolute bottom-3 left-3 z-10 flex items-center gap-1.5 bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded-md border border-slate-800">
             <span
               className={`h-2 w-2 rounded-full ${
@@ -107,9 +139,16 @@ export default function ProductCard({ product }: ProductCardProps) {
                 : "In Stock"}
             </span>
           </div>
+
+          {/* Discount Pill in bottom right */}
+          {discountPercent > 0 && (
+            <div className="absolute bottom-3 right-3 z-10 bg-emerald-500 text-slate-950 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md shadow-sm">
+              Save {discountPercent}%
+            </div>
+          )}
         </div>
 
-        {/* Details Section */}
+        {/* Content Details Section */}
         <div className="p-5 flex-1 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between gap-2">
@@ -117,7 +156,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                 {product.category}
               </span>
 
-              {/* Customer Rating Stars */}
+              {/* Verified Customer Star Rating */}
               <div className="flex items-center gap-1 bg-slate-950 px-2 py-0.5 rounded-md border border-slate-800">
                 <span className="text-amber-400 text-xs">★</span>
                 <span className="text-xs font-bold text-white">
@@ -140,7 +179,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         </div>
       </Link>
 
-      {/* Footer Price & Quick Add CTA */}
+      {/* Footer Price & Add To Bag CTA Button */}
       <div className="p-5 pt-0 flex items-center justify-between border-t border-slate-800/60 mt-auto pt-4">
         <div className="flex flex-col">
           {product.originalPrice && (

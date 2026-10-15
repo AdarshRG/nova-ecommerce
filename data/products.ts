@@ -1,21 +1,29 @@
 // ==============================================================================
 // FILE: data/products.ts
-// ARCHITECTURE ROLE: In-Memory Database Catalog & Product Lookup Functions
+// ARCHITECTURE ROLE: In-Memory Database Catalog & High-Performance Lookup Layer
 //
-// ROUTE MAP & COMPONENT USAGE:
-//   1. Provides mock database arrays (`CATEGORIES`, `PRODUCTS`) imported across:
-//      - Homepage (`app/page.tsx`, `HeroSection.tsx`, `FeaturedProducts.tsx`)
-//      - Dynamic Product Detail Pages (`app/products/[slug]/page.tsx`)
-//      - Search Modal (`components/catalog/SearchModal.tsx`)
-//      - Wishlist & Cart Drawers (`WishlistDrawer.tsx`, `CartDrawer.tsx`)
-//   2. Day 5 Update: Includes realistic verified customer review arrays (`Review[]`)
-//      with rating scores, helpful votes, and author avatars.
+// ROUTE MAP & COMPONENT CONSUMPTION:
+//   This module acts as the single source of truth for all mock product and category entities.
+//   It is queried across:
+//     - Root Homepage (`app/page.tsx` -> `HeroSection.tsx`, `FeaturedProducts.tsx`)
+//     - Dynamic Product Detail Pages (`app/products/[slug]/page.tsx` via `generateStaticParams()`)
+//     - Dynamic Category Department Pages (`app/categories/[slug]/page.tsx` via `generateStaticParams()`)
+//     - Command-K Search Engine (`components/catalog/SearchModal.tsx`)
+//     - Product Comparison Engine (`components/compare/ProductCompareDrawer.tsx`)
+//     - Wishlist & Cart Drawers (`WishlistDrawer.tsx`, `CartDrawer.tsx`)
+//
+// ACCELERATED 30-DAY TRACK (Day 6 Update):
+//   - Expanded catalog to 8 flagship products (2 per category department) with
+//     comparable technical specifications (Driver/Display, Battery/Power, Weight, Connectivity).
+//   - Added `getCategoryBySlug()` and `getProductsByCategory()` lookup utilities.
+//   - Verified customer review records attached to every product item.
 // ==============================================================================
 
 import { Product, Category } from "../types/product";
 
 /**
- * Array of store category departments.
+ * CATEGORIES: Master catalog of product departments.
+ * Used for top-level navigation, category grid cards, and dynamic SSG route pre-rendering.
  */
 export const CATEGORIES: Category[] = [
   {
@@ -23,39 +31,43 @@ export const CATEGORIES: Category[] = [
     name: "Audio & Tech",
     slug: "audio-tech",
     itemCount: 24,
-    gradient: "from-blue-600 to-indigo-700",
-    description: "High-fidelity wireless sound, spatial audio, and hybrid active noise cancellation gear.",
+    gradient: "from-blue-600 via-indigo-600 to-indigo-800",
+    description: "Studio-grade wireless sound, active hybrid noise cancellation, and spatial acoustics.",
   },
   {
     id: "2",
     name: "Wearables",
     slug: "wearables",
     itemCount: 18,
-    gradient: "from-purple-600 to-pink-600",
-    description: "Next-gen smartwatches with continuous ECG, SpO2, and dual-frequency GPS tracking.",
+    gradient: "from-purple-600 via-pink-600 to-rose-700",
+    description: "Biometric health trackers with continuous ECG, dual-frequency GPS, and AMOLED displays.",
   },
   {
     id: "3",
     name: "Smart Home",
     slug: "smart-home",
     itemCount: 32,
-    gradient: "from-emerald-600 to-teal-700",
-    description: "Ambient RGB dynamic lighting, screen-sync bars, and smart home automation devices.",
+    gradient: "from-emerald-600 via-teal-600 to-cyan-700",
+    description: "Adaptive screen-sync backlighting, ambient RGB optics, and automated smart ecosystems.",
   },
   {
     id: "4",
     name: "Accessories",
     slug: "accessories",
     itemCount: 45,
-    gradient: "from-amber-500 to-orange-600",
-    description: "Weatherproof EDC tech backpacks, wireless charging docks, and protective gear.",
+    gradient: "from-amber-500 via-orange-600 to-amber-700",
+    description: "Ballistic weatherproof Cordura EDC packs, magnetic wireless charging docks, and organizer gear.",
   },
 ];
 
 /**
- * Main mock products catalog array with full specs, features, prices, and reviews.
+ * PRODUCTS: Master in-memory product database array.
+ * Contains detailed specifications formatted uniformly to support the side-by-side comparison engine.
  */
 export const PRODUCTS: Product[] = [
+  // ----------------------------------------------------------------------------
+  // ITEM 1: Audio & Tech Flagship Headphones
+  // ----------------------------------------------------------------------------
   {
     id: "p1",
     slug: "nova-sonic-wireless",
@@ -76,10 +88,13 @@ export const PRODUCTS: Product[] = [
       "Memory Foam Ear Cushions",
     ],
     specs: {
-      "Driver Size": "40mm Titanium",
-      "Battery": "40 Hours (ANC On)",
-      "Weight": "250g",
-      "Connectivity": "Bluetooth 5.4 / USB-C / 3.5mm",
+      "Primary Driver": "40mm Titanium Acoustic Drivers",
+      "Battery Life": "40 Hours (ANC On) / 55 Hours (ANC Off)",
+      "Weight": "250g Ultra-lightweight",
+      "Connectivity": "Bluetooth 5.4 / USB-C Lossless / 3.5mm",
+      "Noise Cancellation": "Hybrid Active ANC (-38 dB)",
+      "Water Resistance": "IPX4 Splash Resistant",
+      "Warranty": "2-Year Comprehensive Manufacturer Warranty",
     },
     tag: "BEST SELLER",
     badge: "SAVE $50",
@@ -110,20 +125,12 @@ export const PRODUCTS: Product[] = [
         verifiedPurchase: true,
         helpfulCount: 19,
       },
-      {
-        id: "rev-103",
-        author: "David Kim",
-        avatar: "DK",
-        rating: 4,
-        date: "2026-09-05",
-        title: "Great Build Quality, Sleek Carrying Case",
-        comment:
-          "Premium materials all around. The touch controls take a day to get used to, but spatial audio mode sounds amazing when watching movies.",
-        verifiedPurchase: true,
-        helpfulCount: 12,
-      },
     ],
   },
+
+  // ----------------------------------------------------------------------------
+  // ITEM 2: Wearables Flagship Smartwatch
+  // ----------------------------------------------------------------------------
   {
     id: "p2",
     slug: "nova-pulse-smartwatch-pro",
@@ -144,10 +151,13 @@ export const PRODUCTS: Product[] = [
       "50m Water Resistance (5 ATM)",
     ],
     specs: {
-      "Display": "1.91-inch AMOLED (1000 nits)",
-      "Battery": "Up to 7 Days",
-      "Water Resistance": "50 Meters (5 ATM)",
-      "Sensors": "ECG, SpO2, Accelerometer, Gyro",
+      "Primary Driver": "1.91-inch AMOLED Sapphire Glass (1000 nits)",
+      "Battery Life": "Up to 7 Days Standard Use",
+      "Weight": "48g (Body only)",
+      "Connectivity": "Bluetooth 5.3 Low Energy + Wi-Fi",
+      "Noise Cancellation": "Dual-Mic Call Noise Reduction",
+      "Water Resistance": "50 Meters (5 ATM / IP68)",
+      "Warranty": "2-Year Comprehensive Manufacturer Warranty",
     },
     tag: "NEW ARRIVAL",
     badge: "15% OFF",
@@ -166,20 +176,12 @@ export const PRODUCTS: Product[] = [
         verifiedPurchase: true,
         helpfulCount: 22,
       },
-      {
-        id: "rev-202",
-        author: "Brian Miller",
-        avatar: "BM",
-        rating: 4,
-        date: "2026-09-12",
-        title: "Precise GPS tracking for trail running",
-        comment:
-          "Dual frequency GPS locked onto satellites in under 5 seconds during my mountain trail run. Very satisfied with the health metrics.",
-        verifiedPurchase: true,
-        helpfulCount: 15,
-      },
     ],
   },
+
+  // ----------------------------------------------------------------------------
+  // ITEM 3: Smart Home Dynamic Light Bar
+  // ----------------------------------------------------------------------------
   {
     id: "p3",
     slug: "nova-lumina-light-bar",
@@ -200,10 +202,13 @@ export const PRODUCTS: Product[] = [
       "Zero Screen Glare Optical Design",
     ],
     specs: {
-      "Power": "15W USB-C Powered",
-      "Lifespan": "50,000 Hours",
-      "Compatibility": "Monitors 24 - 34 inches",
-      "Connectivity": "Wi-Fi 2.4GHz + Bluetooth",
+      "Primary Driver": "16 Million RGB Optical LEDs + Warm White",
+      "Battery Life": "15W USB-C Continuous Powered",
+      "Weight": "420g Counterbalanced Aluminum",
+      "Connectivity": "Wi-Fi 2.4GHz + Bluetooth Mesh",
+      "Noise Cancellation": "N/A (Optical Hardware)",
+      "Water Resistance": "Dry Indoor Use Only",
+      "Warranty": "2-Year Comprehensive Manufacturer Warranty",
     },
     tag: "POPULAR",
     badge: "HOT DEAL",
@@ -224,6 +229,10 @@ export const PRODUCTS: Product[] = [
       },
     ],
   },
+
+  // ----------------------------------------------------------------------------
+  // ITEM 4: Accessories Tech Backpack
+  // ----------------------------------------------------------------------------
   {
     id: "p4",
     slug: "nova-core-backpack",
@@ -244,10 +253,13 @@ export const PRODUCTS: Product[] = [
       "Ergonomic Weight-Balance Shoulder Straps",
     ],
     specs: {
-      "Capacity": "24 Liters",
-      "Weight": "1.1 kg",
-      "Laptop Fit": "Up to 16-inch MacBook Pro",
-      "Material": "Waterproof Cordura Nylon",
+      "Primary Driver": "1000D Ballistic Cordura Fabric Chassis",
+      "Battery Life": "Pass-Through Integrated USB-C Hub",
+      "Weight": "1.1 kg Ergonomic Frame",
+      "Connectivity": "USB-C Passthrough Port + RFID Shield",
+      "Noise Cancellation": "N/A (Ballistic Gear)",
+      "Water Resistance": "Weatherproof Hydrophobic Coating",
+      "Warranty": "Lifetime Craftsmanship Warranty",
     },
     tag: "TOP RATED",
     badge: "LIMITED",
@@ -262,19 +274,245 @@ export const PRODUCTS: Product[] = [
         date: "2026-09-27",
         title: "Best EDC Tech Backpack I've Owned",
         comment:
-          "Fits my 16-inch laptop, tablet, mechanical keyboard, and cables cleanly. Water resistance saved my gear during a heavy rainstorm last week.",
+          "Fits my 16-inch laptop, tablet, mechanical keyboard, and cables cleanly. Water resistance saved my gear during heavy rain.",
         verifiedPurchase: true,
         helpfulCount: 41,
       },
     ],
   },
+
+  // ----------------------------------------------------------------------------
+  // ITEM 5: Audio & Tech Wireless Earbuds (New Day 6 Addition)
+  // ----------------------------------------------------------------------------
+  {
+    id: "p5",
+    slug: "nova-air-clarity-earbuds",
+    name: "NOVA Air Clarity Earbuds Pro",
+    category: "Audio & Tech",
+    price: 149.99,
+    originalPrice: 179.99,
+    rating: 4.8,
+    reviewCount: 88,
+    imageBg: "bg-slate-900",
+    icon: "🎵",
+    description:
+      "Ultra-compact true wireless earbuds with adaptive transparency mode, 11mm graphene drivers, and Qi wireless charging case.",
+    features: [
+      "Adaptive Active Noise Cancellation & Transparency",
+      "32 Hours Total Playback with Wireless Charging Case",
+      "Custom 11mm Graphene High-Resolution Drivers",
+      "IPX5 Sweat & Water Resistance",
+    ],
+    specs: {
+      "Primary Driver": "11mm Graphene Acoustic Drivers",
+      "Battery Life": "8h Earbuds + 24h Wireless Case (32h Total)",
+      "Weight": "4.2g per earbud (42g with case)",
+      "Connectivity": "Bluetooth 5.4 + Qi Wireless / USB-C",
+      "Noise Cancellation": "Adaptive Active Noise Cancellation (-35 dB)",
+      "Water Resistance": "IPX5 Sweat & Rain Resistant",
+      "Warranty": "2-Year Comprehensive Manufacturer Warranty",
+    },
+    tag: "COMPACT FLAGSHIP",
+    badge: "SAVE $30",
+    inStock: true,
+    stockCount: 19,
+    reviews: [
+      {
+        id: "rev-501",
+        author: "Tyler Adams",
+        avatar: "TA",
+        rating: 5,
+        date: "2026-10-02",
+        title: "Crystal Clear Voice Mics & Punchy Bass",
+        comment:
+          "These stay locked in my ears during HIIT workouts. The transparency mode sounds completely natural like you're not wearing anything.",
+        verifiedPurchase: true,
+        helpfulCount: 26,
+      },
+    ],
+  },
+
+  // ----------------------------------------------------------------------------
+  // ITEM 6: Wearables Fitness Band (New Day 6 Addition)
+  // ----------------------------------------------------------------------------
+  {
+    id: "p6",
+    slug: "nova-orbit-fitness-band",
+    name: "NOVA Orbit Fitness Band",
+    category: "Wearables",
+    price: 79.99,
+    originalPrice: 99.99,
+    rating: 4.6,
+    reviewCount: 64,
+    imageBg: "bg-slate-900",
+    icon: "🏃",
+    description:
+      "Featherweight fitness tracker designed for 24/7 recovery tracking, sleep cycle analysis, continuous skin temperature, and 14-day battery life.",
+    features: [
+      "14-Day Ultra Long Endurance Battery",
+      "Continuous Blood Oxygen (SpO2) & Sleep Stages",
+      "50+ Dedicated Athletic Exercise Tracking Modes",
+      "Slim Curved OLED Touch Panel",
+    ],
+    specs: {
+      "Primary Driver": "1.47-inch Curved OLED Panel",
+      "Battery Life": "14 Days Typical Use / 9 Days Heavy",
+      "Weight": "24g (With hypoallergenic silicone strap)",
+      "Connectivity": "Bluetooth 5.2 Low Energy",
+      "Noise Cancellation": "N/A (Wearable Sensor)",
+      "Water Resistance": "50 Meters (5 ATM / Swimming Proof)",
+      "Warranty": "2-Year Comprehensive Manufacturer Warranty",
+    },
+    tag: "VALUE PICK",
+    badge: "20% OFF",
+    inStock: true,
+    stockCount: 31,
+    reviews: [
+      {
+        id: "rev-601",
+        author: "Melissa Scott",
+        avatar: "MS",
+        rating: 5,
+        date: "2026-10-04",
+        title: "Battery genuinely lasts two entire weeks!",
+        comment:
+          "I forgot where I put the charger because I only have to charge it twice a month. Extremely lightweight and comfortable to sleep in.",
+        verifiedPurchase: true,
+        helpfulCount: 14,
+      },
+    ],
+  },
+
+  // ----------------------------------------------------------------------------
+  // ITEM 7: Smart Home 360 Speaker (New Day 6 Addition)
+  // ----------------------------------------------------------------------------
+  {
+    id: "p7",
+    slug: "nova-halo-smart-speaker",
+    name: "NOVA Halo 360 Smart Speaker",
+    category: "Smart Home",
+    price: 129.99,
+    originalPrice: 159.99,
+    rating: 4.8,
+    reviewCount: 52,
+    imageBg: "bg-slate-900",
+    icon: "🔊",
+    description:
+      "Omnidirectional 360-degree spatial sound system with room-calibration microphones, woven acoustical fabric, and voice assistant integration.",
+    features: [
+      "Room-Sensing Acoustic Auto-Calibration",
+      "Dual Passive Radiators with Deep Sub-Bass",
+      "AirPlay 2, Spotify Connect & Multi-Room Audio",
+      "Touch-Sensitive Top Optical Volume Ring",
+    ],
+    specs: {
+      "Primary Driver": "Custom 2.5-inch Woofer + Dual Tweeters",
+      "Battery Life": "Continuous AC Wall Adapter Power",
+      "Weight": "850g Acoustic Dampened Enclosure",
+      "Connectivity": "Wi-Fi 6 + Bluetooth 5.3 + AirPlay 2",
+      "Noise Cancellation": "Far-Field Voice Echo Cancellation",
+      "Water Resistance": "Indoor Moisture Resistant",
+      "Warranty": "2-Year Comprehensive Manufacturer Warranty",
+    },
+    tag: "NEW RELEASE",
+    badge: "SAVE $30",
+    inStock: true,
+    stockCount: 11,
+    reviews: [
+      {
+        id: "rev-701",
+        author: "Devon Reed",
+        avatar: "DR",
+        rating: 5,
+        date: "2026-10-05",
+        title: "Incredible room-filling sound in a tiny package",
+        comment:
+          "Pairs with my NOVA Lumina light bar effortlessly. The room calibration makes acoustic guitars sound like the musician is in the room with you.",
+        verifiedPurchase: true,
+        helpfulCount: 17,
+      },
+    ],
+  },
+
+  // ----------------------------------------------------------------------------
+  // ITEM 8: Accessories Magnetic Desk Pad (New Day 6 Addition)
+  // ----------------------------------------------------------------------------
+  {
+    id: "p8",
+    slug: "nova-magcharge-desk-pad",
+    name: "NOVA MagCharge Magnetic Desk Pad",
+    category: "Accessories",
+    price: 59.99,
+    originalPrice: 79.99,
+    rating: 4.7,
+    reviewCount: 114,
+    imageBg: "bg-slate-900",
+    icon: "⚡",
+    description:
+      "Premium vegan leather workspace mat with modular magnetic wireless charging zone. Powers your smartphone and wireless earbuds simultaneously.",
+    features: [
+      "Dual 15W Qi Fast Wireless Magnetic Charger",
+      "Spill-Resistant Vegan Matte Leather Surface",
+      "Smooth Low-Friction Mouse Tracking Area",
+      "Concealed Cable Channel & Anti-Slip Base",
+    ],
+    specs: {
+      "Primary Driver": "Dual 15W Fast Magnetic Induction Coils",
+      "Battery Life": "USB-C PD 30W Input Powered",
+      "Weight": "650g Weighted Natural Rubber Base",
+      "Connectivity": "USB-C Braided Cable (2m included)",
+      "Noise Cancellation": "N/A (Workspace Hardware)",
+      "Water Resistance": "Spill & Stain Hydrophobic Coating",
+      "Warranty": "2-Year Comprehensive Manufacturer Warranty",
+    },
+    tag: "DESK ESSENTIAL",
+    badge: "25% OFF",
+    inStock: true,
+    stockCount: 28,
+    reviews: [
+      {
+        id: "rev-801",
+        author: "Camila Ruiz",
+        avatar: "CR",
+        rating: 5,
+        date: "2026-10-01",
+        title: "Cleaned up all the charging cables on my desk",
+        comment:
+          "Just drop my phone and earbuds on the magnetic corner and they charge fast. Mouse glides like butter on the leather.",
+        verifiedPurchase: true,
+        helpfulCount: 31,
+      },
+    ],
+  },
 ];
 
+// ==============================================================================
+// CATALOG LOOKUP HELPER UTILITIES
+// ==============================================================================
+
 /**
- * Lookup Helper: Finds a product object matching a given URL slug.
+ * Finds a product object matching a given URL slug.
  * @param slug Dynamic route parameter string e.g. "nova-sonic-wireless"
  * @returns Product object if found, or undefined if not matched.
  */
 export function getProductBySlug(slug: string): Product | undefined {
   return PRODUCTS.find((p) => p.slug === slug);
+}
+
+/**
+ * Finds a category object matching a given category URL slug.
+ * @param slug Category slug string e.g. "audio-tech"
+ * @returns Category object if found, or undefined.
+ */
+export function getCategoryBySlug(slug: string): Category | undefined {
+  return CATEGORIES.find((c) => c.slug === slug);
+}
+
+/**
+ * Retrieves all products belonging to a given category name.
+ * @param categoryName Display category string e.g. "Audio & Tech"
+ * @returns Filtered array of Product objects.
+ */
+export function getProductsByCategory(categoryName: string): Product[] {
+  return PRODUCTS.filter((p) => p.category.toLowerCase() === categoryName.toLowerCase());
 }

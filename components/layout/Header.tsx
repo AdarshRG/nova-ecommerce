@@ -3,11 +3,13 @@
 // ARCHITECTURE ROLE: Sticky Top Navigation Header Component
 //
 // ROUTE MAP & COMPONENT FLOW:
-//   1. Mounted inside `app/page.tsx` and `app/products/[slug]/page.tsx`.
-//   2. Day 5 Update: Accepts `onOpenSearch` callback prop and features `id="global-search-trigger"`
-//      to trigger Command-K (⌘K) `<SearchModal />`.
-//   3. Subscribes to `useCartStore` (`getTotalItems()`) and `useWishlistStore` (`getTotalWishlistItems()`).
-//   4. Includes hydration protection (`isMounted`) to prevent SSR mismatch warnings.
+//   1. Mounted inside `app/page.tsx`, `app/products/[slug]/page.tsx`, and `app/categories/[slug]/page.tsx`.
+//   2. Day 6 Update:
+//      - Subscribes to `useCompareStore` (`getCompareCount()`, `openCompare()`) to render live comparison matrix badge.
+//      - Subscribes to `useWishlistStore` (`getTotalWishlistItems()`, `openWishlist()`).
+//      - Subscribes to `useCartStore` (`getTotalItems()`, `openCart()`).
+//      - Accepts `onOpenSearch` callback prop and features `id="global-search-trigger"` for Command-K (⌘K).
+//   3. Hydration protection flag (`isMounted`) ensures persisted localStorage values do not trigger SSR mismatch warnings.
 // ==============================================================================
 
 "use client";
@@ -16,24 +18,29 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useCartStore } from "../../store/useCartStore";
 import { useWishlistStore } from "../../store/useWishlistStore";
+import { useCompareStore } from "../../store/useCompareStore";
 
 interface HeaderProps {
   onOpenSearch?: () => void;
 }
 
 export default function Header({ onOpenSearch }: HeaderProps) {
+  // Hydration safety flag
   const [isMounted, setIsMounted] = useState(false);
 
   // Zustand Store Selectors
   const { getTotalItems, openCart } = useCartStore();
   const { getTotalWishlistItems, openWishlist } = useWishlistStore();
+  const { getCompareCount, openCompare } = useCompareStore();
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
+  // Compute live counts safely after client mounts
   const totalCartItems = isMounted ? getTotalItems() : 0;
   const totalWishlistItems = isMounted ? getTotalWishlistItems() : 0;
+  const totalCompareItems = isMounted ? getCompareCount() : 0;
 
   return (
     <header className="sticky top-0 z-40 backdrop-blur-xl bg-slate-950/85 border-b border-slate-800/80 px-6 py-4 transition-all">
@@ -48,7 +55,7 @@ export default function Header({ onOpenSearch }: HeaderProps) {
               NOVA
             </span>
             <span className="text-[9px] font-extrabold uppercase tracking-widest text-violet-400 -mt-1">
-              HARDWARE 2026
+              STOREFRONT 2026
             </span>
           </div>
         </Link>
@@ -58,14 +65,14 @@ export default function Header({ onOpenSearch }: HeaderProps) {
           <Link href="/" className="hover:text-white transition-colors">
             Catalog
           </Link>
-          <a href="#featured" className="hover:text-white transition-colors">
+          <a href="/#categories" className="hover:text-white transition-colors">
+            Departments
+          </a>
+          <a href="/#featured" className="hover:text-white transition-colors">
             Featured
           </a>
-          <a href="#categories" className="hover:text-white transition-colors">
-            Categories
-          </a>
           <a
-            href="#featured"
+            href="/#featured"
             className="text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1"
           >
             <span>⚡ Deals</span>
@@ -86,6 +93,22 @@ export default function Header({ onOpenSearch }: HeaderProps) {
               ⌘K
             </kbd>
           </button>
+
+          {/* Comparison Matrix Trigger (renders counter badge if items compared) */}
+          {totalCompareItems > 0 && (
+            <button
+              onClick={openCompare}
+              aria-label="Open Comparison Matrix"
+              className="relative p-2.5 rounded-xl bg-violet-950/60 hover:bg-violet-900/60 border border-violet-700/60 transition-all text-violet-300 hover:scale-105 active:scale-95 flex items-center gap-1.5"
+              title="Open Side-by-Side Comparison"
+            >
+              <span className="text-sm font-bold">⇄</span>
+              <span className="text-xs font-bold hidden sm:inline">Compare</span>
+              <span className="min-w-4 h-4 px-1 rounded-full bg-violet-600 text-[10px] font-black text-white flex items-center justify-center shadow-md animate-pulse">
+                {totalCompareItems}
+              </span>
+            </button>
+          )}
 
           {/* Saved Favorites Wishlist Button */}
           <button

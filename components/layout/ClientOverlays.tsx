@@ -3,16 +3,16 @@
 // ARCHITECTURE ROLE: Master Client State Overlays Container Component
 //
 // ROUTE MAP & COMPONENT FLOW:
-//   1. Mounted inside Server Components (`app/page.tsx`, `app/products/[slug]/page.tsx`).
-//   2. Day 5 Update: Integrates `<SearchModal />` for Command-K (⌘K) quick search,
-//      and passes `onOpenSearch` trigger down to `<Header />`.
-//   3. Composes all global client state overlays:
+//   1. Mounted inside Server Component pages (`app/page.tsx`, `app/products/[slug]/page.tsx`, `app/categories/[slug]/page.tsx`).
+//   2. Marked with `'use client'` to manage interactive modal states across the entire application.
+//   3. Composes all client-side overlays:
 //      - `<Header />`: Sticky navigation header with search and counter badges.
 //      - `<Toast />`: Interactive notification alert popups.
 //      - `<CartDrawer />`: Slide-over shopping bag drawer.
 //      - `<WishlistDrawer />`: Slide-over saved favorites drawer.
+//      - `<ProductCompareDrawer />`: Multi-product specs matrix comparison modal & floating dock.
+//      - `<SearchModal />`: Real-time Command-K (⌘K) quick search overlay.
 //      - `<CheckoutModal />`: Shipping address validation & checkout modal.
-//      - `<SearchModal />`: Real-time Command-K quick search overlay.
 // ==============================================================================
 
 "use client";
@@ -24,6 +24,7 @@ import CartDrawer from "../cart/CartDrawer";
 import WishlistDrawer from "../wishlist/WishlistDrawer";
 import CheckoutModal from "../checkout/CheckoutModal";
 import SearchModal from "../catalog/SearchModal";
+import ProductCompareDrawer from "../compare/ProductCompareDrawer";
 
 export default function ClientOverlays() {
   // Modal visibility states
@@ -43,6 +44,9 @@ export default function ClientOverlays() {
 
       {/* Slide-over Saved Favorites Wishlist Drawer */}
       <WishlistDrawer />
+
+      {/* Multi-Product Specifications Comparison Matrix & Sticky Bottom Dock */}
+      <ProductCompareDrawer />
 
       {/* Command-K (⌘K) Quick Search Overlay Modal */}
       <SearchModal
