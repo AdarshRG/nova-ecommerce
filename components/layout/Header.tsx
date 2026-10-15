@@ -2,14 +2,17 @@
 // FILE: components/layout/Header.tsx
 // ARCHITECTURE ROLE: Sticky Top Navigation Header Component
 //
-// ROUTE MAP & COMPONENT FLOW:
-//   1. Mounted inside `app/page.tsx`, `app/products/[slug]/page.tsx`, and `app/categories/[slug]/page.tsx`.
-//   2. Day 6 Update:
-//      - Subscribes to `useCompareStore` (`getCompareCount()`, `openCompare()`) to render live comparison matrix badge.
-//      - Subscribes to `useWishlistStore` (`getTotalWishlistItems()`, `openWishlist()`).
-//      - Subscribes to `useCartStore` (`getTotalItems()`, `openCart()`).
-//      - Accepts `onOpenSearch` callback prop and features `id="global-search-trigger"` for Command-K (⌘K).
-//   3. Hydration protection flag (`isMounted`) ensures persisted localStorage values do not trigger SSR mismatch warnings.
+// 🎓 BEGINNER'S GUIDE TO THIS COMPONENT:
+//   What does this component do?
+//     This is the sticky navbar that stays at the top of your screen as you scroll.
+//   Notice how it integrates multiple global features cleanly:
+//     1. Brand Logo: Clicking "NOVA" takes you home.
+//     2. Search Trigger: Clicking or pressing ⌘K opens the Quick Search Modal.
+//     3. Compare Button: Shows up dynamically when you compare products (`⇄ Compare`).
+//     4. Wishlist Button: Shows how many favorite items you saved (`❤️`).
+//     5. Bag Button: Shows the total number of items in your cart (`🛍️`).
+//     6. Customer Auth Button: If you are signed in, it shows your avatar initials;
+//        if signed out, it shows a "Sign In" button!
 // ==============================================================================
 
 "use client";
@@ -19,6 +22,7 @@ import Link from "next/link";
 import { useCartStore } from "../../store/useCartStore";
 import { useWishlistStore } from "../../store/useWishlistStore";
 import { useCompareStore } from "../../store/useCompareStore";
+import { useAuthStore } from "../../store/useAuthStore";
 
 interface HeaderProps {
   onOpenSearch?: () => void;
@@ -32,6 +36,7 @@ export default function Header({ onOpenSearch }: HeaderProps) {
   const { getTotalItems, openCart } = useCartStore();
   const { getTotalWishlistItems, openWishlist } = useWishlistStore();
   const { getCompareCount, openCompare } = useCompareStore();
+  const { user, isAuthenticated, openAuthModal, openAccountDrawer } = useAuthStore();
 
   useEffect(() => {
     setIsMounted(true);
@@ -45,7 +50,7 @@ export default function Header({ onOpenSearch }: HeaderProps) {
   return (
     <header className="sticky top-0 z-40 backdrop-blur-xl bg-slate-950/85 border-b border-slate-800/80 px-6 py-4 transition-all">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-        {/* Brand Logo & Title */}
+        {/* 1. Brand Logo & Title */}
         <Link href="/" className="flex items-center gap-3 group">
           <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-violet-600 via-indigo-600 to-blue-600 flex items-center justify-center font-black text-xl text-white shadow-lg shadow-violet-600/30 group-hover:scale-105 transition-transform">
             N
@@ -60,7 +65,7 @@ export default function Header({ onOpenSearch }: HeaderProps) {
           </div>
         </Link>
 
-        {/* Primary Navigation Links */}
+        {/* 2. Primary Navigation Links */}
         <nav className="hidden md:flex items-center gap-8 text-xs font-bold uppercase tracking-wider text-slate-400">
           <Link href="/" className="hover:text-white transition-colors">
             Catalog
@@ -79,8 +84,8 @@ export default function Header({ onOpenSearch }: HeaderProps) {
           </a>
         </nav>
 
-        {/* Action Controls */}
-        <div className="flex items-center gap-3">
+        {/* 3. Action Controls */}
+        <div className="flex items-center gap-2.5 sm:gap-3">
           {/* Command-K (⌘K) Quick Search Button Trigger */}
           <button
             id="global-search-trigger"
@@ -94,7 +99,7 @@ export default function Header({ onOpenSearch }: HeaderProps) {
             </kbd>
           </button>
 
-          {/* Comparison Matrix Trigger (renders counter badge if items compared) */}
+          {/* Comparison Matrix Trigger (renders when items are in compare list) */}
           {totalCompareItems > 0 && (
             <button
               onClick={openCompare}
@@ -123,6 +128,28 @@ export default function Header({ onOpenSearch }: HeaderProps) {
               </span>
             )}
           </button>
+
+          {/* Customer Profile / Sign In Button */}
+          {isMounted && isAuthenticated && user ? (
+            <button
+              onClick={openAccountDrawer}
+              className="flex items-center gap-2 py-1.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs text-white font-bold transition-all active:scale-95"
+              title="Open Account & Orders"
+            >
+              <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-violet-600 to-indigo-600 text-white text-[10px] flex items-center justify-center font-black">
+                {user.name.slice(0, 2).toUpperCase()}
+              </div>
+              <span className="hidden sm:inline">{user.name.split(" ")[0]}</span>
+            </button>
+          ) : (
+            <button
+              onClick={openAuthModal}
+              className="py-2 px-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs text-slate-200 font-bold transition-all hover:text-white active:scale-95 flex items-center gap-1.5"
+            >
+              <span>👤</span>
+              <span className="hidden sm:inline">Sign In</span>
+            </button>
+          )}
 
           {/* Shopping Bag Button */}
           <button

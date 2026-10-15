@@ -5,11 +5,9 @@
 // 🎓 BEGINNER'S GUIDE TO THIS COMPONENT:
 //   Why does this component exist?
 //     In Next.js, our main pages (`app/page.tsx` and `app/products/[slug]`) are
-//     "React Server Components" (RSC). They run on the Node.js server so they can generate
-//     fast HTML with zero JavaScript download weight.
-//     However, interactive popups (like our Cart Drawer, Wishlist Drawer, Search Modal,
-//     Compare Matrix, and Quick View Modal) NEED to run in the user's browser because
-//     they react to clicks, keystrokes, and animations.
+//     "React Server Components" (RSC). They run on the server to generate super fast HTML.
+//     However, interactive popups (Cart, Wishlist, Search, Compare, Quick View, and Auth)
+//     need to run on the client side in the browser.
 //     By putting all client-side popups inside this single `'use client'` wrapper,
 //     our pages stay fast and clean on the server!
 // ==============================================================================
@@ -25,9 +23,11 @@ import CheckoutModal from "../checkout/CheckoutModal";
 import SearchModal from "../catalog/SearchModal";
 import ProductCompareDrawer from "../compare/ProductCompareDrawer";
 import QuickViewModal from "../catalog/QuickViewModal";
+import AuthModal from "../auth/AuthModal";
+import AccountDrawer from "../auth/AccountDrawer";
 
 export default function ClientOverlays() {
-  // Modal visibility states managed locally
+  // Modal visibility states
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
@@ -36,7 +36,7 @@ export default function ClientOverlays() {
       {/* 1. Sticky Navigation Header with Quick Search trigger */}
       <Header onOpenSearch={() => setIsSearchOpen(true)} />
 
-      {/* 2. Global Toast Notification Alerts (e.g. "Added to bag", "Promo applied") */}
+      {/* 2. Global Toast Notification Alerts */}
       <Toast />
 
       {/* 3. Slide-over Shopping Bag Drawer */}
@@ -45,19 +45,25 @@ export default function ClientOverlays() {
       {/* 4. Slide-over Saved Favorites Wishlist Drawer */}
       <WishlistDrawer />
 
-      {/* 5. Product Quick View Inspection Modal */}
+      {/* 5. Customer Sign In / Register Modal */}
+      <AuthModal />
+
+      {/* 6. Customer Account Profile & Order History Drawer */}
+      <AccountDrawer />
+
+      {/* 7. Product Quick View Inspection Modal */}
       <QuickViewModal />
 
-      {/* 6. Multi-Product Specifications Comparison Matrix & Sticky Bottom Dock */}
+      {/* 8. Multi-Product Specifications Comparison Matrix & Sticky Bottom Dock */}
       <ProductCompareDrawer />
 
-      {/* 7. Command-K (⌘K) Quick Search Overlay Modal */}
+      {/* 9. Command-K (⌘K) Quick Search Overlay Modal */}
       <SearchModal
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
       />
 
-      {/* 8. Shipping Address Validation & Order Checkout Modal */}
+      {/* 10. Shipping Address Validation & Order Checkout Modal */}
       <CheckoutModal
         isOpen={isCheckoutOpen}
         onClose={() => setIsCheckoutOpen(false)}
