@@ -2,11 +2,19 @@
 // FILE: app/page.tsx
 // ARCHITECTURE ROLE: Home Page Route (`/`)
 //
-// ROUTE MAP & COMPONENT COMPOSITION:
-//   Visiting http://localhost:3000/ executes this file.
-//   1. React Server Component (RSC) running on Node.js server.
-//   2. Day 5 Update: Integrates `<ClientOverlays />` composing Navigation Header,
-//      Command-K Search Modal, Cart Drawer, Wishlist Drawer, Checkout Modal, and Toast notifications.
+// 🎓 BEGINNER'S GUIDE TO THIS PAGE:
+//   What is this file?
+//     This is the main storefront homepage of our website (what users see when they visit
+//     http://localhost:3000/).
+//   How does it work?
+//     It is a "React Server Component" (RSC).
+//     Next.js runs this component on the server, fetches our products, and renders
+//     the sub-components like blocks of Lego:
+//       1. `<HeroSection />`: The big flagship hardware showcase at the top.
+//       2. `<CategoriesGrid />`: The 4 department cards (Audio, Wearables, Smart Home, Accessories).
+//       3. `<FeaturedProducts />`: The main catalog grid with search, sort, and filters.
+//       4. `<RecentlyViewedSection />`: Shows items the user recently looked at.
+//       5. `<ClientOverlays />`: Runs our interactive popups (Cart, Wishlist, Quick View, Search).
 // ==============================================================================
 
 import React from "react";
@@ -17,6 +25,7 @@ import Footer from "../components/layout/Footer";
 import HeroSection from "../components/home/HeroSection";
 import CategoriesGrid from "../components/home/CategoriesGrid";
 import FeaturedProducts from "../components/home/FeaturedProducts";
+import RecentlyViewedSection from "../components/home/RecentlyViewedSection";
 
 // Master Client Overlays Container:
 import ClientOverlays from "../components/layout/ClientOverlays";
@@ -32,7 +41,7 @@ export default function Home() {
         🚀 Launch Special: Free Worldwide Express Shipping on Orders Over $99 | Use Code <span className="font-extrabold underline tracking-wider">NOVANEXT</span> for $15 OFF
       </div>
 
-      {/* Global Client Overlays (Header, SearchModal, Toast, CartDrawer, WishlistDrawer, CheckoutModal) */}
+      {/* Global Client Overlays (Header, SearchModal, Toast, Cart, Wishlist, Compare, Quick View, Checkout) */}
       <ClientOverlays />
 
       {/* Main Container composing sub-sections */}
@@ -40,9 +49,10 @@ export default function Home() {
         <HeroSection />
         <CategoriesGrid categories={CATEGORIES} />
         <FeaturedProducts products={PRODUCTS} />
+        <RecentlyViewedSection />
       </main>
 
-      {/* Footer */}
+      {/* Site Footer */}
       <Footer />
     </div>
   );

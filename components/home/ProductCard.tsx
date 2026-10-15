@@ -2,15 +2,20 @@
 // FILE: components/home/ProductCard.tsx
 // ARCHITECTURE ROLE: Enterprise Interactive Product Card UI Component
 //
-// ROUTE MAP & COMPONENT FLOW:
-//   1. Rendered inside `<FeaturedProducts />`, category pages, and search/recommendation grids.
-//   2. Subscribes to:
-//      - `useCartStore`: Adds product to shopping bag (`addItem(product)`).
-//      - `useWishlistStore`: Toggles favorite status (`toggleWishlist(product.id)`).
-//      - `useCompareStore`: Toggles side-by-side comparison (`toggleCompare(product)`).
-//   3. Event Isolation:
-//      - Clicking the card body navigates to `/products/[slug]`.
-//      - Clicking "❤️" (Wishlist), "⇄ Compare" (Comparison), or "+ Add to Bag" halts link redirection via `e.preventDefault()`.
+// 🎓 BEGINNER'S GUIDE TO THIS COMPONENT:
+//   What does this component do?
+//     This component renders each individual product card in our grids.
+//   Notice how it handles multiple user actions seamlessly:
+//     1. Card Navigation: Clicking the card takes you to the full product page (`/products/[slug]`).
+//     2. "Quick View" Button: Opens a preview modal without leaving the page.
+//     3. "⇄ Compare" Button: Adds the item to your side-by-side comparison dock.
+//     4. "❤️ Wishlist" Button: Saves the item to your favorites.
+//     5. "+ Add to Bag" Button: Puts the item directly in your shopping cart.
+//   How do we prevent button clicks from accidentally opening the product link?
+//     We use `e.preventDefault()`!
+//     In normal HTML, if a button is inside an `<a href="...">` link, clicking the button
+//     would also trigger the link. `e.preventDefault()` stops that bubbling so only the
+//     button action runs!
 // ==============================================================================
 
 "use client";
@@ -21,6 +26,7 @@ import { Product } from "../../types/product";
 import { useCartStore } from "../../store/useCartStore";
 import { useWishlistStore } from "../../store/useWishlistStore";
 import { useCompareStore } from "../../store/useCompareStore";
+import { useQuickViewStore } from "../../store/useQuickViewStore";
 
 interface ProductCardProps {
   product: Product;
@@ -30,11 +36,13 @@ export default function ProductCard({ product }: ProductCardProps) {
   // Client hydration flag to prevent server/client storage rehydration mismatches
   const [isMounted, setIsMounted] = useState(false);
 
-  // Store Hooks
+  // Store Hooks: Accessing state actions from our global stores
   const { addItem } = useCartStore();
   const { toggleWishlist, isInWishlist } = useWishlistStore();
   const { toggleCompare, isInCompare } = useCompareStore();
+  const { openQuickView } = useQuickViewStore();
 
+  // Once mounted in the browser, enable reading client-side storage
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -50,26 +58,32 @@ export default function ProductCard({ product }: ProductCardProps) {
       )
     : 0;
 
-  // EVENT HANDLER: Add product to shopping bag
+  // EVENT HANDLER 1: Add product to shopping bag
   const handleAddToCart = (e: React.MouseEvent) => {
-    e.preventDefault();
+    e.preventDefault(); // Stop link navigation
     addItem(product);
   };
 
-  // EVENT HANDLER: Toggle product in wishlist
+  // EVENT HANDLER 2: Toggle product in wishlist
   const handleToggleWishlist = (e: React.MouseEvent) => {
-    e.preventDefault();
+    e.preventDefault(); // Stop link navigation
     toggleWishlist(product.id);
   };
 
-  // EVENT HANDLER: Toggle product in comparison matrix
+  // EVENT HANDLER 3: Toggle product in comparison matrix
   const handleToggleCompare = (e: React.MouseEvent) => {
-    e.preventDefault();
+    e.preventDefault(); // Stop link navigation
     toggleCompare(product);
   };
 
+  // EVENT HANDLER 4: Open product in Quick View modal
+  const handleQuickView = (e: React.MouseEvent) => {
+    e.preventDefault(); // Stop link navigation
+    openQuickView(product);
+  };
+
   return (
-    <div className="group bg-slate-900/90 border border-slate-800 hover:border-slate-700/80 rounded-2xl overflow-hidden flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:shadow-violet-950/20 hover:-translate-y-1">
+    <div className="group bg-slate-900/90 border border-slate-800 hover:border-slate-700/80 rounded-2xl overflow-hidden flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:shadow-violet-950/20 hover:-translate-y-1 relative">
       {/* Clickable Card Link Body navigating to PDP `/products/[slug]` */}
       <Link href={`/products/${product.slug}`} className="block flex-1 flex flex-col">
         {/* Visual Graphic Header Box */}
@@ -124,8 +138,18 @@ export default function ProductCard({ product }: ProductCardProps) {
             {product.icon}
           </div>
 
-          {/* Bottom Left Stock Inventory Availability Pill */}
-          <div className="absolute bottom-3 left-3 z-10 flex items-center gap-1.5 bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded-md border border-slate-800">
+          {/* Quick View Hover Button (Appears smoothly when hovering over the card) */}
+          <div className="absolute inset-x-4 bottom-3 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20">
+            <button
+              onClick={handleQuickView}
+              className="w-full py-2 bg-slate-950/95 hover:bg-slate-900 border border-slate-700/80 text-white text-xs font-bold rounded-xl shadow-xl backdrop-blur-md transition-all active:scale-95 flex items-center justify-center gap-1.5"
+            >
+              <span>👁️ Quick View</span>
+            </button>
+          </div>
+
+          {/* Bottom Left Stock Inventory Availability Pill (hidden on hover when Quick View button shows) */}
+          <div className="absolute bottom-3 left-3 z-10 flex items-center gap-1.5 bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded-md border border-slate-800 group-hover:opacity-0 transition-opacity">
             <span
               className={`h-2 w-2 rounded-full ${
                 product.stockCount < 10
@@ -140,9 +164,9 @@ export default function ProductCard({ product }: ProductCardProps) {
             </span>
           </div>
 
-          {/* Discount Pill in bottom right */}
+          {/* Discount Pill in bottom right (hidden on hover when Quick View button shows) */}
           {discountPercent > 0 && (
-            <div className="absolute bottom-3 right-3 z-10 bg-emerald-500 text-slate-950 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md shadow-sm">
+            <div className="absolute bottom-3 right-3 z-10 bg-emerald-500 text-slate-950 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md shadow-sm group-hover:opacity-0 transition-opacity">
               Save {discountPercent}%
             </div>
           )}
@@ -175,6 +199,23 @@ export default function ProductCard({ product }: ProductCardProps) {
             <p className="text-xs text-slate-400 mt-1.5 line-clamp-2 leading-relaxed">
               {product.description}
             </p>
+
+            {/* Small Color Swatches preview indicator if variants exist */}
+            {product.colorVariants && product.colorVariants.length > 0 && (
+              <div className="flex items-center gap-1.5 mt-3 pt-2 border-t border-slate-800/40">
+                <span className="text-[10px] text-slate-500 font-medium">Colors:</span>
+                <div className="flex items-center gap-1">
+                  {product.colorVariants.map((c) => (
+                    <span
+                      key={c.name}
+                      className="w-2.5 h-2.5 rounded-full border border-slate-700"
+                      style={{ backgroundColor: c.hex }}
+                      title={c.name}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </Link>

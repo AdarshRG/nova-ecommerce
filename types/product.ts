@@ -1,112 +1,142 @@
 // ==============================================================================
 // FILE: types/product.ts
-// ARCHITECTURE ROLE: Centralized TypeScript Data Contracts & Domain Model Interfaces
+// ARCHITECTURE ROLE: Centralized TypeScript Data Contracts & Domain Model Blueprints
 //
-// ROUTE MAP & COMPONENT USAGE:
-//   This file defines the foundational TypeScript interfaces utilized across:
-//     - Data Layer (`data/products.ts` catalog database array)
-//     - State Stores (`store/useCartStore.ts`, `store/useWishlistStore.ts`)
-//     - UI Components (`ProductCard.tsx`, `ProductReviews.tsx`, `SearchModal.tsx`)
-//     - Checkout Validation (`CheckoutModal.tsx`)
-//     - Server Routes (`app/page.tsx`, `app/products/[slug]/page.tsx`)
-//
-// ACCELERATED 60-DAY TRACK (Day 5 Update):
-//   Added `Review` interface for verified customer feedback, rating distributions,
-//   and `NewReviewFormData` contract for the interactive review submission form.
+// 🎓 BEGINNER'S GUIDE TO THIS FILE:
+//   What is this file?
+//     Think of this file as the "Architectural Blueprint" of our whole application.
+//     In TypeScript, an `interface` sets strict rules for what information an object
+//     MUST have (like a product having a name and a price).
+//   Why is it important?
+//     If someone accidentally forgets to add a price, or types "prce" instead of "price",
+//     TypeScript catches the mistake instantly while coding, rather than crashing on users!
+//   What does the `?` question mark symbol mean?
+//     When you see `originalPrice?: number`, the `?` means OPTIONAL.
+//     It means a product doesn't HAVE to have an original MSRP price, but if it does,
+//     it must be a valid number.
 // ==============================================================================
 
 /**
- * Interface representing a verified customer review for a product.
+ * ColorVariant Interface
+ * Represents a color option/finish for a hardware product (e.g., Space Black, Silver).
+ */
+export interface ColorVariant {
+  name: string;        // Display name of the color e.g. "Space Black", "Titanium Silver"
+  hex: string;         // Hex color code for CSS background dot e.g. "#0f172a"
+  bgClass: string;     // Tailwind CSS background class e.g. "bg-slate-900"
+}
+
+/**
+ * Review Interface
+ * Represents a verified customer review and feedback entry.
  */
 export interface Review {
-  id: string;              // Unique identifier for the review e.g. "rev-101"
-  author: string;          // Customer display name e.g. "Alex Chen"
-  avatar?: string;         // Customer avatar initials or image URL
-  rating: number;          // Rating score from 1 to 5 stars
-  date: string;            // ISO formatted or readable date string e.g. "2026-09-28"
-  title: string;           // Short headline summary of the review
-  comment: string;         // Full detailed review text content
-  verifiedPurchase: boolean; // Flag indicating if reviewer purchased item from store
-  helpfulCount: number;    // Count of users who upvoted this review as helpful
+  id: string;              // Unique ID e.g. "rev-101"
+  author: string;          // Reviewer's display name e.g. "Marcus Vance"
+  avatar?: string;         // Reviewer's initials e.g. "MV"
+  rating: number;          // Star rating score from 1 to 5
+  date: string;            // Formatted date string e.g. "2026-09-24"
+  title: string;           // Headline summary e.g. "Phenomenal Sound!"
+  comment: string;         // Full review text
+  verifiedPurchase: boolean; // True if customer actually bought the item
+  helpfulCount: number;    // Count of community upvotes
 }
 
 /**
- * Interface representing a single product item in the store catalog.
+ * Product Interface
+ * Master domain model representing a hardware item in our catalog.
  */
 export interface Product {
-  id: string;              // Unique identifier e.g. "p1"
-  slug: string;            // URL-friendly slug identifier e.g. "nova-sonic-wireless"
-  name: string;            // Display product title
-  category: string;        // Department category name e.g. "Audio & Tech"
-  price: number;           // Current retail selling price in USD
-  originalPrice?: number;  // MSRP original price before discount (for strike-through UI)
-  rating: number;          // Customer rating average out of 5.0 (e.g. 4.9)
-  reviewCount: number;     // Total verified customer reviews count
-  reviews?: Review[];      // Array of verified customer reviews for PDP
-  imageBg: string;         // Tailwind CSS background styling class for visual box
-  icon: string;            // Emoji or visual symbol representing the product
-  description: string;     // Detailed narrative description of the item
-  features: string[];      // Array of bullet point features
-  specs: Record<string, string>; // Map of key-value technical specifications
-  tag?: string;            // Promotional tag e.g. "BEST SELLER", "NEW ARRIVAL"
-  badge?: string;          // Discount pill badge e.g. "SAVE $50", "15% OFF"
-  inStock: boolean;        // Stock availability flag
-  stockCount: number;      // Physical stock inventory quantity remaining
+  id: string;                  // Unique identifier e.g. "p1"
+  slug: string;                // URL path friendly name e.g. "nova-sonic-wireless"
+  name: string;                // Product display title e.g. "NOVA Sonic Wireless"
+  category: string;            // Department category e.g. "Audio & Tech"
+  price: number;               // Current retail price in USD e.g. 249.99
+  originalPrice?: number;      // Original MSRP price before discount e.g. 299.99
+  rating: number;              // Average rating score (out of 5.0) e.g. 4.9
+  reviewCount: number;         // Total review count e.g. 142
+  reviews?: Review[];          // Array of verified customer reviews
+  colorVariants?: ColorVariant[]; // Array of selectable color options
+  imageBg: string;             // Tailwind background style class
+  icon: string;                // Visual icon symbol representing product e.g. "🎧"
+  description: string;         // Full narrative description
+  features: string[];          // Bullet-point list of features
+  specs: Record<string, string>; // Key-value map of technical specs e.g. { "Weight": "250g" }
+  tag?: string;                // Optional badge e.g. "BEST SELLER"
+  badge?: string;              // Optional discount tag e.g. "SAVE $50"
+  inStock: boolean;            // Stock availability flag
+  stockCount: number;          // Remaining stock quantity in warehouse
 }
 
 /**
- * Interface representing a category department.
+ * Category Interface
+ * Represents a department category in our store.
  */
 export interface Category {
-  id: string;
-  name: string;
-  slug: string;
-  itemCount: number;
-  gradient: string;
-  description: string;
+  id: string;          // Category unique ID e.g. "1"
+  name: string;        // Display name e.g. "Audio & Tech"
+  slug: string;        // URL path slug e.g. "audio-tech"
+  itemCount: number;   // Number of items in this department
+  gradient: string;    // Tailwind CSS gradient styling
+  description: string; // Narrative overview of the department
 }
 
 /**
- * Interface representing an item inside the user's active shopping cart.
+ * CartItem Interface
+ * Represents an item placed inside the user's shopping bag.
  */
 export interface CartItem {
-  product: Product;        // Full reference to the target product
-  quantity: number;       // Quantity selected by the user
+  product: Product;    // Complete product object
+  quantity: number;    // How many units the customer wants to buy
+  selectedColor?: string; // Optional chosen color variant name
 }
 
 /**
- * Interface representing a global interactive toast alert notification.
+ * ToastNotification Interface
+ * Represents an alert popup message sliding onto the screen.
  */
 export interface ToastNotification {
-  id: string;
-  message: string;
-  product?: Product;
-  type: "success" | "info" | "warning";
+  id: string;          // Unique timestamp ID
+  message: string;     // Text alert message
+  product?: Product;   // Optional product linked to the alert
+  type: "success" | "info" | "warning"; // Severity styling
 }
 
 /**
- * Interface representing shipping address data collected during checkout.
+ * AddressFormData Interface
+ * Represents the customer's delivery information during checkout.
  */
 export interface AddressFormData {
-  fullName: string;        // Customer full name (minimum 2 characters)
-  email: string;           // Customer email (validated against RFC format)
-  streetAddress: string;   // Delivery street address
-  city: string;            // Delivery city
-  postalCode: string;      // Postal / ZIP code (validated format)
-  phoneNumber: string;     // Contact phone number for delivery updates
+  fullName: string;      // Customer's name
+  email: string;         // Customer's email
+  streetAddress: string; // Shipping street address
+  city: string;          // Shipping city
+  postalCode: string;    // Postal / ZIP code
+  phoneNumber: string;   // Phone number for carrier updates
 }
 
 /**
- * Interface mapping field validation error messages for checkout form.
+ * FormErrors Type
+ * Maps validation error messages to specific form field names.
  */
 export type FormErrors = Partial<Record<keyof AddressFormData, string>>;
 
 /**
- * Interface representing new review form data submitted by users.
+ * NewReviewFormData Interface
+ * Data collected when a user writes a review in the modal form.
  */
 export interface NewReviewFormData {
   author: string;
   rating: number;
   title: string;
   comment: string;
+}
+
+/**
+ * RecentlyViewedRecord Interface
+ * Tracks when a user viewed a product for the browsing history bar.
+ */
+export interface RecentlyViewedRecord {
+  productId: string;   // ID of viewed product
+  viewedAt: number;    // Timestamp in milliseconds (Date.now())
 }

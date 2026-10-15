@@ -2,28 +2,25 @@
 // FILE: data/products.ts
 // ARCHITECTURE ROLE: In-Memory Database Catalog & High-Performance Lookup Layer
 //
-// ROUTE MAP & COMPONENT CONSUMPTION:
-//   This module acts as the single source of truth for all mock product and category entities.
-//   It is queried across:
-//     - Root Homepage (`app/page.tsx` -> `HeroSection.tsx`, `FeaturedProducts.tsx`)
-//     - Dynamic Product Detail Pages (`app/products/[slug]/page.tsx` via `generateStaticParams()`)
-//     - Dynamic Category Department Pages (`app/categories/[slug]/page.tsx` via `generateStaticParams()`)
-//     - Command-K Search Engine (`components/catalog/SearchModal.tsx`)
-//     - Product Comparison Engine (`components/compare/ProductCompareDrawer.tsx`)
-//     - Wishlist & Cart Drawers (`WishlistDrawer.tsx`, `CartDrawer.tsx`)
-//
-// ACCELERATED 30-DAY TRACK (Day 6 Update):
-//   - Expanded catalog to 8 flagship products (2 per category department) with
-//     comparable technical specifications (Driver/Display, Battery/Power, Weight, Connectivity).
-//   - Added `getCategoryBySlug()` and `getProductsByCategory()` lookup utilities.
-//   - Verified customer review records attached to every product item.
+// 🎓 BEGINNER'S GUIDE TO THIS FILE:
+//   What is an "In-Memory Database"?
+//     In production apps, products usually live inside an external database (like PostgreSQL or MySQL).
+//     During development, we store our items in JavaScript arrays right here in memory (`const PRODUCTS = [...]`).
+//     This allows our application to run blazingly fast without needing to connect to an external server.
+//   How does Next.js use this data?
+//     1. Server Components (`app/page.tsx`) import `PRODUCTS` directly to render the page HTML on Node.js.
+//     2. Dynamic Routes (`app/products/[slug]`) call `getProductBySlug("nova-sonic-wireless")`
+//        to find the specific product that matches the URL.
+//     3. The `.find()` and `.filter()` methods are standard JavaScript functions:
+//        - `.find()` returns the FIRST matching item.
+//        - `.filter()` returns ALL items that match the condition.
 // ==============================================================================
 
 import { Product, Category } from "../types/product";
 
 /**
- * CATEGORIES: Master catalog of product departments.
- * Used for top-level navigation, category grid cards, and dynamic SSG route pre-rendering.
+ * CATEGORIES: Master catalog of store departments.
+ * Used for top-level navigation, department grid cards, and dynamic SSG route pre-rendering.
  */
 export const CATEGORIES: Category[] = [
   {
@@ -62,7 +59,7 @@ export const CATEGORIES: Category[] = [
 
 /**
  * PRODUCTS: Master in-memory product database array.
- * Contains detailed specifications formatted uniformly to support the side-by-side comparison engine.
+ * Each item contains detailed specifications, color finishes, and verified customer reviews.
  */
 export const PRODUCTS: Product[] = [
   // ----------------------------------------------------------------------------
@@ -86,6 +83,11 @@ export const PRODUCTS: Product[] = [
       "40 Hours Battery Life with Fast Charge",
       "Bluetooth 5.4 with Spatial Audio Support",
       "Memory Foam Ear Cushions",
+    ],
+    colorVariants: [
+      { name: "Space Black", hex: "#0f172a", bgClass: "bg-slate-900" },
+      { name: "Titanium Silver", hex: "#94a3b8", bgClass: "bg-slate-400" },
+      { name: "Midnight Indigo", hex: "#1e1b4b", bgClass: "bg-indigo-950" },
     ],
     specs: {
       "Primary Driver": "40mm Titanium Acoustic Drivers",
@@ -150,6 +152,11 @@ export const PRODUCTS: Product[] = [
       "Dual-Frequency GPS for Precise Tracking",
       "50m Water Resistance (5 ATM)",
     ],
+    colorVariants: [
+      { name: "Stealth Obsidian", hex: "#18181b", bgClass: "bg-zinc-900" },
+      { name: "Arctic Platinum", hex: "#cbd5e1", bgClass: "bg-slate-300" },
+      { name: "Rose Blush", hex: "#fb7185", bgClass: "bg-rose-400" },
+    ],
     specs: {
       "Primary Driver": "1.91-inch AMOLED Sapphire Glass (1000 nits)",
       "Battery Life": "Up to 7 Days Standard Use",
@@ -200,6 +207,10 @@ export const PRODUCTS: Product[] = [
       "16 Million RGB Colors + Warm White",
       "Smart App & Voice Control (Alexa/Siri)",
       "Zero Screen Glare Optical Design",
+    ],
+    colorVariants: [
+      { name: "Matte Graphite", hex: "#27272a", bgClass: "bg-zinc-800" },
+      { name: "Frosted Lunar", hex: "#f8fafc", bgClass: "bg-slate-100" },
     ],
     specs: {
       "Primary Driver": "16 Million RGB Optical LEDs + Warm White",
@@ -252,6 +263,11 @@ export const PRODUCTS: Product[] = [
       "Integrated USB-C External Charging Port",
       "Ergonomic Weight-Balance Shoulder Straps",
     ],
+    colorVariants: [
+      { name: "Ballistic Black", hex: "#09090b", bgClass: "bg-zinc-950" },
+      { name: "Tactical Olive", hex: "#365314", bgClass: "bg-lime-950" },
+      { name: "Shadow Navy", hex: "#172554", bgClass: "bg-blue-950" },
+    ],
     specs: {
       "Primary Driver": "1000D Ballistic Cordura Fabric Chassis",
       "Battery Life": "Pass-Through Integrated USB-C Hub",
@@ -282,7 +298,7 @@ export const PRODUCTS: Product[] = [
   },
 
   // ----------------------------------------------------------------------------
-  // ITEM 5: Audio & Tech Wireless Earbuds (New Day 6 Addition)
+  // ITEM 5: Audio & Tech Wireless Earbuds
   // ----------------------------------------------------------------------------
   {
     id: "p5",
@@ -302,6 +318,11 @@ export const PRODUCTS: Product[] = [
       "32 Hours Total Playback with Wireless Charging Case",
       "Custom 11mm Graphene High-Resolution Drivers",
       "IPX5 Sweat & Water Resistance",
+    ],
+    colorVariants: [
+      { name: "Ceramic Pearl", hex: "#f1f5f9", bgClass: "bg-slate-100" },
+      { name: "Gloss Phantom", hex: "#020617", bgClass: "bg-slate-950" },
+      { name: "Sage Emerald", hex: "#14532d", bgClass: "bg-emerald-900" },
     ],
     specs: {
       "Primary Driver": "11mm Graphene Acoustic Drivers",
@@ -333,7 +354,7 @@ export const PRODUCTS: Product[] = [
   },
 
   // ----------------------------------------------------------------------------
-  // ITEM 6: Wearables Fitness Band (New Day 6 Addition)
+  // ITEM 6: Wearables Fitness Band
   // ----------------------------------------------------------------------------
   {
     id: "p6",
@@ -353,6 +374,11 @@ export const PRODUCTS: Product[] = [
       "Continuous Blood Oxygen (SpO2) & Sleep Stages",
       "50+ Dedicated Athletic Exercise Tracking Modes",
       "Slim Curved OLED Touch Panel",
+    ],
+    colorVariants: [
+      { name: "Carbon Slate", hex: "#334155", bgClass: "bg-slate-700" },
+      { name: "Crimson Blaze", hex: "#e11d48", bgClass: "bg-rose-600" },
+      { name: "Deep Pacific", hex: "#0369a1", bgClass: "bg-sky-700" },
     ],
     specs: {
       "Primary Driver": "1.47-inch Curved OLED Panel",
@@ -384,7 +410,7 @@ export const PRODUCTS: Product[] = [
   },
 
   // ----------------------------------------------------------------------------
-  // ITEM 7: Smart Home 360 Speaker (New Day 6 Addition)
+  // ITEM 7: Smart Home 360 Speaker
   // ----------------------------------------------------------------------------
   {
     id: "p7",
@@ -404,6 +430,10 @@ export const PRODUCTS: Product[] = [
       "Dual Passive Radiators with Deep Sub-Bass",
       "AirPlay 2, Spotify Connect & Multi-Room Audio",
       "Touch-Sensitive Top Optical Volume Ring",
+    ],
+    colorVariants: [
+      { name: "Charcoal Mesh", hex: "#1e293b", bgClass: "bg-slate-800" },
+      { name: "Heather Mist", hex: "#64748b", bgClass: "bg-slate-500" },
     ],
     specs: {
       "Primary Driver": "Custom 2.5-inch Woofer + Dual Tweeters",
@@ -435,7 +465,7 @@ export const PRODUCTS: Product[] = [
   },
 
   // ----------------------------------------------------------------------------
-  // ITEM 8: Accessories Magnetic Desk Pad (New Day 6 Addition)
+  // ITEM 8: Accessories Magnetic Desk Pad
   // ----------------------------------------------------------------------------
   {
     id: "p8",
@@ -455,6 +485,11 @@ export const PRODUCTS: Product[] = [
       "Spill-Resistant Vegan Matte Leather Surface",
       "Smooth Low-Friction Mouse Tracking Area",
       "Concealed Cable Channel & Anti-Slip Base",
+    ],
+    colorVariants: [
+      { name: "Saddle Tan", hex: "#78350f", bgClass: "bg-amber-900" },
+      { name: "Midnight Onyx", hex: "#0f172a", bgClass: "bg-slate-900" },
+      { name: "Forest Moss", hex: "#064e3b", bgClass: "bg-emerald-950" },
     ],
     specs: {
       "Primary Driver": "Dual 15W Fast Magnetic Induction Coils",
@@ -488,30 +523,31 @@ export const PRODUCTS: Product[] = [
 
 // ==============================================================================
 // CATALOG LOOKUP HELPER UTILITIES
+// 🎓 Explanation: These helper functions give us quick ways to query our mock database!
 // ==============================================================================
 
 /**
- * Finds a product object matching a given URL slug.
- * @param slug Dynamic route parameter string e.g. "nova-sonic-wireless"
- * @returns Product object if found, or undefined if not matched.
+ * getProductBySlug(slug)
+ * Finds a product matching a specific URL slug.
+ * Example: `getProductBySlug("nova-sonic-wireless")` returns the headphones object.
  */
 export function getProductBySlug(slug: string): Product | undefined {
   return PRODUCTS.find((p) => p.slug === slug);
 }
 
 /**
- * Finds a category object matching a given category URL slug.
- * @param slug Category slug string e.g. "audio-tech"
- * @returns Category object if found, or undefined.
+ * getCategoryBySlug(slug)
+ * Finds a category matching a specific category slug.
+ * Example: `getCategoryBySlug("audio-tech")` returns the Audio & Tech category object.
  */
 export function getCategoryBySlug(slug: string): Category | undefined {
   return CATEGORIES.find((c) => c.slug === slug);
 }
 
 /**
- * Retrieves all products belonging to a given category name.
- * @param categoryName Display category string e.g. "Audio & Tech"
- * @returns Filtered array of Product objects.
+ * getProductsByCategory(categoryName)
+ * Returns all products that belong to a specific department.
+ * Example: `getProductsByCategory("Audio & Tech")` returns headphones and earbuds.
  */
 export function getProductsByCategory(categoryName: string): Product[] {
   return PRODUCTS.filter((p) => p.category.toLowerCase() === categoryName.toLowerCase());

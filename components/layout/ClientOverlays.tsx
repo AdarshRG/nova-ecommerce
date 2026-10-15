@@ -2,17 +2,16 @@
 // FILE: components/layout/ClientOverlays.tsx
 // ARCHITECTURE ROLE: Master Client State Overlays Container Component
 //
-// ROUTE MAP & COMPONENT FLOW:
-//   1. Mounted inside Server Component pages (`app/page.tsx`, `app/products/[slug]/page.tsx`, `app/categories/[slug]/page.tsx`).
-//   2. Marked with `'use client'` to manage interactive modal states across the entire application.
-//   3. Composes all client-side overlays:
-//      - `<Header />`: Sticky navigation header with search and counter badges.
-//      - `<Toast />`: Interactive notification alert popups.
-//      - `<CartDrawer />`: Slide-over shopping bag drawer.
-//      - `<WishlistDrawer />`: Slide-over saved favorites drawer.
-//      - `<ProductCompareDrawer />`: Multi-product specs matrix comparison modal & floating dock.
-//      - `<SearchModal />`: Real-time Command-K (⌘K) quick search overlay.
-//      - `<CheckoutModal />`: Shipping address validation & checkout modal.
+// 🎓 BEGINNER'S GUIDE TO THIS COMPONENT:
+//   Why does this component exist?
+//     In Next.js, our main pages (`app/page.tsx` and `app/products/[slug]`) are
+//     "React Server Components" (RSC). They run on the Node.js server so they can generate
+//     fast HTML with zero JavaScript download weight.
+//     However, interactive popups (like our Cart Drawer, Wishlist Drawer, Search Modal,
+//     Compare Matrix, and Quick View Modal) NEED to run in the user's browser because
+//     they react to clicks, keystrokes, and animations.
+//     By putting all client-side popups inside this single `'use client'` wrapper,
+//     our pages stay fast and clean on the server!
 // ==============================================================================
 
 "use client";
@@ -25,36 +24,40 @@ import WishlistDrawer from "../wishlist/WishlistDrawer";
 import CheckoutModal from "../checkout/CheckoutModal";
 import SearchModal from "../catalog/SearchModal";
 import ProductCompareDrawer from "../compare/ProductCompareDrawer";
+import QuickViewModal from "../catalog/QuickViewModal";
 
 export default function ClientOverlays() {
-  // Modal visibility states
+  // Modal visibility states managed locally
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   return (
     <>
-      {/* Sticky Navigation Header with Search Trigger */}
+      {/* 1. Sticky Navigation Header with Quick Search trigger */}
       <Header onOpenSearch={() => setIsSearchOpen(true)} />
 
-      {/* Global Interactive Toast Notification Alert */}
+      {/* 2. Global Toast Notification Alerts (e.g. "Added to bag", "Promo applied") */}
       <Toast />
 
-      {/* Slide-over Shopping Bag Drawer */}
+      {/* 3. Slide-over Shopping Bag Drawer */}
       <CartDrawer onOpenCheckout={() => setIsCheckoutOpen(true)} />
 
-      {/* Slide-over Saved Favorites Wishlist Drawer */}
+      {/* 4. Slide-over Saved Favorites Wishlist Drawer */}
       <WishlistDrawer />
 
-      {/* Multi-Product Specifications Comparison Matrix & Sticky Bottom Dock */}
+      {/* 5. Product Quick View Inspection Modal */}
+      <QuickViewModal />
+
+      {/* 6. Multi-Product Specifications Comparison Matrix & Sticky Bottom Dock */}
       <ProductCompareDrawer />
 
-      {/* Command-K (⌘K) Quick Search Overlay Modal */}
+      {/* 7. Command-K (⌘K) Quick Search Overlay Modal */}
       <SearchModal
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
       />
 
-      {/* Shipping Address Validation & Order Checkout Modal */}
+      {/* 8. Shipping Address Validation & Order Checkout Modal */}
       <CheckoutModal
         isOpen={isCheckoutOpen}
         onClose={() => setIsCheckoutOpen(false)}
