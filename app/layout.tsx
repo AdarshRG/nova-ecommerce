@@ -5,20 +5,7 @@
 // ==============================================================================
 
 import type { Metadata } from "next"; // Type for SEO metadata (title, description)
-import { Geist, Geist_Mono } from "next/font/google"; // Google Fonts optimized loader
 import "./globals.css"; // Global Tailwind CSS import
-
-// Initialize Geist Sans font with CSS variable name '--font-geist-sans'
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-// Initialize Geist Mono font with CSS variable name '--font-geist-mono'
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 // Define SEO metadata rendered in the HTML <head>
 export const metadata: Metadata = {
@@ -33,12 +20,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="en" className="h-full antialiased">
       {/* {children} receives page.tsx content */}
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col font-sans">{children}</body>
     </html>
   );
 }
+

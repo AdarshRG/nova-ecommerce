@@ -2,7 +2,8 @@
 
 > **Target Title:** Senior Frontend / Full-Stack Engineer | React | Next.js | TypeScript | E-Commerce | BigCommerce | Shopify  
 > **Project Location:** `D:\NOVA Project\nova-ecommerce`  
-> **PDF Study Guide Location:** `D:\NOVA Project\NOVA_Course_Day1_Day2_Notes.pdf`
+> **PDF Study Guide Location:** `D:\NOVA Project\NOVA_Course_Day1_Day2_Notes.pdf`  
+> **Deployment Guide:** [`DEPLOYMENT_AND_BACKEND_GUIDE.md`](file:///D:/NOVA%20Project/nova-ecommerce/DEPLOYMENT_AND_BACKEND_GUIDE.md)
 
 ---
 
@@ -10,8 +11,8 @@
 
 ```mermaid
 flowchart LR
-    W1["WEEK 1 (Days 1-7) ✅ COMPLETED:<br/>Advanced Storefront Architecture & Enterprise UI<br/>(Next.js 16, RSC, Zustand Persistence, SSG Dynamic Routes, Quick View, Color Swatches, Compare Matrix)"] --> W2["WEEK 2 (Days 8-15) 🚀 IN PROGRESS:<br/>Customer Auth, Account Management, Multi-Step Checkout & Orders<br/>(Day 8: Auth & Account Receipts ✅ | Day 9: Multi-Step Checkout & Dynamic Order Tracking Route ✅)"]
-    W2 --> W3["WEEK 3 (Days 16-22):<br/>Full-Stack Database, ORM & Headless API Layer<br/>(PostgreSQL, Prisma ORM, Server Actions, Route Handlers, Webhooks, Image Pipeline)"]
+    W1["WEEK 1 (Days 1-7) ✅ COMPLETED:<br/>Advanced Storefront Architecture & Enterprise UI<br/>(Next.js 16, RSC, Zustand Persistence, SSG Dynamic Routes, Quick View, Color Swatches, Compare Matrix)"] --> W2["WEEK 2 (Days 8-15) 🚀 IN PROGRESS:<br/>Customer Auth, Multi-Step Checkout & Backend Architecture<br/>(Day 8: Auth ✅ | Day 9: Multi-Step Checkout & Tracking ✅ | Day 10: Backend REST APIs, Server Actions & Vercel Hosting Guide ✅)"]
+    W2 --> W3["WEEK 3 (Days 16-22):<br/>Database Integration, Prisma ORM & Headless Layer<br/>(PostgreSQL schema, Prisma Client queries, Webhooks, Image Pipeline)"]
     W3 --> W4["WEEK 4 (Days 23-30):<br/>Stripe Payments, Redis Caching, Production & System Design<br/>(Stripe Webhooks, Redis Rate Limiting, Vercel Production Deploy, Senior Staff Mock Interviews)"]
 ```
 
@@ -24,6 +25,13 @@ flowchart TD
     subgraph Data & Contracts Layer
         Types["types/product.ts & types/auth.ts<br/>(Product, User, Order, ShippingTier, PaymentInfo, Review, Toast Interfaces)"]
         Data["data/products.ts<br/>(8 Flagship Products, Color Finishes, Specs, Verified Reviews & Lookup Utilities)"]
+    end
+
+    subgraph Backend APIs & Server Actions Layer
+        ApiProducts["app/api/products/route.ts<br/>(GET: Search, Filter, Sort & Cache-Control REST API)"]
+        ApiProductSlug["app/api/products/[slug]/route.ts<br/>(GET: Single Product by Slug with 404 Response)"]
+        ApiOrders["app/api/orders/route.ts<br/>(POST: Zero-Trust Server Recalculation, Anti-Tamper & Order Creation)"]
+        ServerActions["app/actions/orderActions.ts<br/>('use server' Direct Server Actions for Orders & Newsletters)"]
     end
 
     subgraph Global State Layer
@@ -44,7 +52,7 @@ flowchart TD
         CompareDrawer["components/compare/ProductCompareDrawer.tsx<br/>(Multi-Product Specs Matrix & Sticky Bottom Floating Dock)"]
         QuickViewModal["components/catalog/QuickViewModal.tsx<br/>(Interactive Quick View Inspection Modal & Color Swatches)"]
         SearchModal["components/catalog/SearchModal.tsx<br/>(Command-K ⌘K Live Quick Search Modal & Instant Previews)"]
-        CheckoutModal["components/checkout/CheckoutModal.tsx<br/>(Enterprise 3-Step Guided Checkout: Address ➔ Delivery Speed ➔ Payment & Review)"]
+        CheckoutModal["components/checkout/CheckoutModal.tsx<br/>(Enterprise 3-Step Guided Checkout: Connected to POST /api/orders)"]
     end
 
     subgraph Dynamic Order Tracking & Views
@@ -70,15 +78,12 @@ flowchart TD
     end
 
     Types --> Data
-    Types --> CartStore
-    Types --> WishlistStore
-    Types --> CompareStore
-    Types --> RecentlyViewedStore
-    Types --> QuickViewStore
-    Types --> AuthStore
-    Data --> Home
-    Data --> PDP
-    Data --> CategoryPage
+    Data --> ApiProducts
+    Data --> ApiProductSlug
+    Data --> ApiOrders
+    Data --> ServerActions
+    CheckoutModal -->|POST HTTP Request| ApiOrders
+    CheckoutModal -->|RPC Server Action| ServerActions
     AuthStore --> Header
     AuthStore --> AuthModal
     AuthStore --> AccountDrawer
@@ -88,16 +93,6 @@ flowchart TD
     CartStore --> CartDrawer
     CartStore --> Toast
     CartStore --> ProductCard
-    WishlistStore --> Header
-    WishlistStore --> WishlistDrawer
-    WishlistStore --> ProductCard
-    CompareStore --> Header
-    CompareStore --> CompareDrawer
-    CompareStore --> ProductCard
-    QuickViewStore --> QuickViewModal
-    QuickViewStore --> ProductCard
-    RecentlyViewedStore --> RecentlyViewedSection
-    RecentlyViewedStore --> AddToCartBtn
     OrderTrackingPage --> OrderTrackingView
     CheckoutModal --> OrderTrackingPage
     AccountDrawer --> OrderTrackingPage
@@ -142,26 +137,28 @@ flowchart TD
 
 ## 📖 Recommended File Study Order (For Beginners & Advanced Learners)
 
-Follow this 18-step sequence when opening files in VS Code to learn the codebase:
+Follow this 20-step sequence when opening files in VS Code to learn the full-stack codebase:
 
-1. **[types/auth.ts](file:///D:/NOVA%20Project/nova-ecommerce/types/auth.ts):** Study customer authentication and multi-step order contracts (`User`, `ShippingTier`, `PaymentInfo`, `Order`, `OrderStatus`).
-2. **[components/checkout/CheckoutModal.tsx](file:///D:/NOVA%20Project/nova-ecommerce/components/checkout/CheckoutModal.tsx):** Master the 3-step checkout state machine (`currentStep: 1 | 2 | 3`), input validation gates, card number formatting, and order routing via `router.push`.
-3. **[components/orders/OrderTrackingView.tsx](file:///D:/NOVA%20Project/nova-ecommerce/components/orders/OrderTrackingView.tsx):** Study the 4-stage fulfillment milestone stepper, carrier tracking codes, recipient cards, and browser print triggers (`window.print()`).
-4. **[app/orders/[orderNumber]/page.tsx](file:///D:/NOVA%20Project/nova-ecommerce/app/orders/[orderNumber]/page.tsx):** Study Next.js 16 dynamic route parameter unwrapping (`await params`) and server component composition.
-5. **[store/useAuthStore.ts](file:///D:/NOVA%20Project/nova-ecommerce/store/useAuthStore.ts):** Learn how user sessions and order invoice receipts are saved in `localStorage`.
-6. **[components/auth/AccountDrawer.tsx](file:///D:/NOVA%20Project/nova-ecommerce/components/auth/AccountDrawer.tsx):** Study the customer slide-over drawer displaying member badges, order status pills ("Delivered" / "Processing"), and direct links to `/orders/[orderNumber]`.
-7. **[components/auth/AuthModal.tsx](file:///D:/NOVA%20Project/nova-ecommerce/components/auth/AuthModal.tsx):** Study login and registration tabs, validation, and 1-click demo login handling.
-8. **[components/layout/Header.tsx](file:///D:/NOVA%20Project/nova-ecommerce/components/layout/Header.tsx):** Learn how the navbar switches dynamically between "Sign In" and the user's avatar initials.
-9. **[components/layout/ClientOverlays.tsx](file:///D:/NOVA%20Project/nova-ecommerce/components/layout/ClientOverlays.tsx):** See how `AuthModal`, `AccountDrawer`, and `CheckoutModal` are mounted cleanly alongside Cart and Wishlist overlays.
-10. **[types/product.ts](file:///D:/NOVA%20Project/nova-ecommerce/types/product.ts):** Study TypeScript blueprints — learn what an `interface` is, what optional `?` fields mean, and how data contracts prevent runtime bugs.
-11. **[data/products.ts](file:///D:/NOVA%20Project/nova-ecommerce/data/products.ts):** Study our mock in-memory database — see how 8 products, color finishes, and specs are queried using `.find()` and `.filter()`.
-12. **[store/useRecentlyViewedStore.ts](file:///D:/NOVA%20Project/nova-ecommerce/store/useRecentlyViewedStore.ts):** Learn how browsing history is recorded, deduplicated, and persisted to browser `localStorage`.
-13. **[store/useQuickViewStore.ts](file:///D:/NOVA%20Project/nova-ecommerce/store/useQuickViewStore.ts):** Learn how lightweight Zustand stores coordinate modal popups across unrelated components.
-14. **[components/product/ColorSwatchPicker.tsx](file:///D:/NOVA%20Project/nova-ecommerce/components/product/ColorSwatchPicker.tsx):** Study controlled React components and "Lifting State Up" when selecting color variants.
-15. **[components/catalog/QuickViewModal.tsx](file:///D:/NOVA%20Project/nova-ecommerce/components/catalog/QuickViewModal.tsx):** Study popup modal architectures, quantity steppers, and purchasing directly from catalog lists.
-16. **[components/home/ProductCard.tsx](file:///D:/NOVA%20Project/nova-ecommerce/components/home/ProductCard.tsx):** Study how `e.preventDefault()` halts parent `<Link>` navigation when clicking Quick View, Compare, Wishlist, or Add to Bag.
-17. **[components/compare/ProductCompareDrawer.tsx](file:///D:/NOVA%20Project/nova-ecommerce/components/compare/ProductCompareDrawer.tsx):** Study sticky floating bottom dock and fullscreen side-by-side technical specifications comparison table.
-18. **[app/categories/[slug]/page.tsx](file:///D:/NOVA%20Project/nova-ecommerce/app/categories/[slug]/page.tsx):** Master dynamic category department SSG routes (`generateStaticParams()`), department banners, and breadcrumb navigation.
+1. **[DEPLOYMENT_AND_BACKEND_GUIDE.md](file:///D:/NOVA%20Project/nova-ecommerce/DEPLOYMENT_AND_BACKEND_GUIDE.md):** Read the master mental model explaining how the frontend browser talks to backend servers, how APIs work, and how to host on Vercel for free.
+2. **[app/api/products/route.ts](file:///D:/NOVA%20Project/nova-ecommerce/app/api/products/route.ts):** Study RESTful Route Handlers — learn how `searchParams` parses query strings (`?search=...&sort=...`) and sends JSON with cache headers.
+3. **[app/api/products/[slug]/route.ts](file:///D:/NOVA%20Project/nova-ecommerce/app/api/products/%5Bslug%5D/route.ts):** Learn how dynamic route segments (`[slug]`) work in Next.js 16 Route Handlers via `await context.params`.
+4. **[app/api/orders/route.ts](file:///D:/NOVA%20Project/nova-ecommerce/app/api/orders/route.ts):** Study **Zero-Trust Server Security** — see why the server MUST recalculate item prices, compute real sales tax, and generate order IDs rather than trusting client inputs.
+5. **[app/actions/orderActions.ts](file:///D:/NOVA%20Project/nova-ecommerce/app/actions/orderActions.ts):** Master modern Next.js 16 / React 19 Server Actions (`"use server"`) and direct RPC server function execution.
+6. **[components/checkout/CheckoutModal.tsx](file:///D:/NOVA%20Project/nova-ecommerce/components/checkout/CheckoutModal.tsx):** Study how client-side form submissions dispatch real `POST` HTTP requests to `/api/orders` with error handling and fallback recovery.
+7. **[components/orders/OrderTrackingView.tsx](file:///D:/NOVA%20Project/nova-ecommerce/components/orders/OrderTrackingView.tsx):** Study the 4-stage fulfillment milestone stepper, carrier tracking codes, recipient cards, and browser print triggers (`window.print()`).
+8. **[app/orders/[orderNumber]/page.tsx](file:///D:/NOVA%20Project/nova-ecommerce/app/orders/[orderNumber]/page.tsx):** Study Next.js 16 dynamic route parameter unwrapping (`await params`) and server component composition.
+9. **[types/auth.ts](file:///D:/NOVA%20Project/nova-ecommerce/types/auth.ts):** Study customer authentication and multi-step order contracts (`User`, `ShippingTier`, `PaymentInfo`, `Order`, `OrderStatus`).
+10. **[store/useAuthStore.ts](file:///D:/NOVA%20Project/nova-ecommerce/store/useAuthStore.ts):** Learn how user sessions and order invoice receipts are saved in `localStorage`.
+11. **[components/auth/AccountDrawer.tsx](file:///D:/NOVA%20Project/nova-ecommerce/components/auth/AccountDrawer.tsx):** Study the customer slide-over drawer displaying member badges, order status pills ("Delivered" / "Processing"), and direct links to `/orders/[orderNumber]`.
+12. **[components/auth/AuthModal.tsx](file:///D:/NOVA%20Project/nova-ecommerce/components/auth/AuthModal.tsx):** Study login and registration tabs, validation, and 1-click demo login handling.
+13. **[components/layout/Header.tsx](file:///D:/NOVA%20Project/nova-ecommerce/components/layout/Header.tsx):** Learn how the navbar switches dynamically between "Sign In" and the user's avatar initials.
+14. **[components/layout/ClientOverlays.tsx](file:///D:/NOVA%20Project/nova-ecommerce/components/layout/ClientOverlays.tsx):** See how `AuthModal`, `AccountDrawer`, and `CheckoutModal` are mounted cleanly alongside Cart and Wishlist overlays.
+15. **[types/product.ts](file:///D:/NOVA%20Project/nova-ecommerce/types/product.ts):** Study TypeScript blueprints — learn what an `interface` is, what optional `?` fields mean, and how data contracts prevent runtime bugs.
+16. **[data/products.ts](file:///D:/NOVA%20Project/nova-ecommerce/data/products.ts):** Study our mock in-memory database — see how 8 products, color finishes, and specs are queried using `.find()` and `.filter()`.
+17. **[store/useRecentlyViewedStore.ts](file:///D:/NOVA%20Project/nova-ecommerce/store/useRecentlyViewedStore.ts):** Learn how browsing history is recorded, deduplicated, and persisted to browser `localStorage`.
+18. **[store/useQuickViewStore.ts](file:///D:/NOVA%20Project/nova-ecommerce/store/useQuickViewStore.ts):** Learn how lightweight Zustand stores coordinate modal popups across unrelated components.
+19. **[components/product/ColorSwatchPicker.tsx](file:///D:/NOVA%20Project/nova-ecommerce/components/product/ColorSwatchPicker.tsx):** Study controlled React components and "Lifting State Up" when selecting color variants.
+20. **[components/home/ProductCard.tsx](file:///D:/NOVA%20Project/nova-ecommerce/components/home/ProductCard.tsx):** Study how `e.preventDefault()` halts parent `<Link>` navigation when clicking Quick View, Compare, Wishlist, or Add to Bag.
 
 ---
 
@@ -171,32 +168,28 @@ Follow this 18-step sequence when opening files in VS Code to learn the codebase
 - Built Next.js 16 App Router foundation, RSC, Zustand persistence, dynamic SSG routes, verified reviews, Command-K search, specs comparison matrix, and Quick View modal system.
 
 ### ✅ Day 8: Customer Authentication, Session State & Order History Receipts (Week 2 Kickoff)
-- **Customer Auth Data Contracts:** Created `types/auth.ts` defining `User`, `Order`, and `OrderStatus` domain models.
-- **Customer Auth & Orders Store:** Created `store/useAuthStore.ts` with `localStorage` persistence under `"nova-auth-storage"` managing user session, loyalty tier ("Gold VIP"), and past order history.
-- **Sign In / Registration Modal:** Built `components/auth/AuthModal.tsx` with Sign In vs Register tabs, validation, and a **"✨ 1-Click Demo Sign In (Alex Chen)"** button for instant testing.
-- **Customer Account Drawer:** Built `components/auth/AccountDrawer.tsx` displaying user avatar, email, member tier, logout action, and real order history receipts with status badges ("Delivered", "Processing").
-- **Checkout & Order History Integration:** Updated `components/checkout/CheckoutModal.tsx` to auto-fill customer name and email when logged in, and automatically record placed orders into `useAuthStore.orders`.
-- **Header Profile Integration:** Updated `components/layout/Header.tsx` to render customer avatar initials when logged in, or a "Sign In" button when logged out.
+- Created `types/auth.ts`, `store/useAuthStore.ts`, `AuthModal.tsx`, `AccountDrawer.tsx`, and integrated authentication with cart checkout and header avatar initials.
 
 ### ✅ Day 9: Multi-Step Checkout Engine & Dynamic Order Tracking Route
-- **Extended Order & Checkout Contracts:** Updated `types/auth.ts` to include `ShippingTier`, `PaymentInfo`, carrier tracking codes, delivery estimates, and sales tax.
-- **Enterprise 3-Step Checkout Flow:** Rebuilt `components/checkout/CheckoutModal.tsx` with a state machine pattern (`1. Shipping Address ➔ 2. Delivery Speed ➔ 3. Payment & Final Review`):
-  - *Step 1 Validation Gate:* Validates recipient name, address, email, postal code before allowing progress.
-  - *Step 2 Delivery Speed:* Selectable options (`Standard Ground`, `Express Priority Air`, `Next-Day Rush`) with live cost recalculation.
-  - *Step 3 Payment Simulation:* Credit Card auto-formatting, 1-Click "✨ Autofill Demo Card", Apple Pay / PayPal tabs, and tax calculation.
-- **Dynamic Order Tracking Route (`/orders/[orderNumber]`):** Created `app/orders/[orderNumber]/page.tsx` utilizing Next.js 16 `await params` dynamic route unwrapping.
-- **Fulfillment Milestone Stepper & Printable Invoice:** Built `components/orders/OrderTrackingView.tsx` featuring a 4-stage live milestone tracker (Order Placed ➔ Payment Confirmed ➔ Shipped & In Transit ➔ Out for Delivery), dual address/payment cards, item breakdown, and native browser print trigger (`window.print()`).
-- **Account Drawer Deep-Linking:** Added direct "Track Order & Invoice →" links on every receipt card in `AccountDrawer.tsx`.
+- Extended order contracts, built 3-step checkout state machine (`Address ➔ Delivery Speed ➔ Payment & Review`), created `/orders/[orderNumber]` dynamic route, 4-stage fulfillment milestone stepper, and invoice print functionality.
+
+### ✅ Day 10: Full-Stack Backend Architecture — Next.js Route Handlers, Server Actions & Production Hosting
+- **RESTful Catalog Route Handler (`app/api/products/route.ts`):** Created GET endpoint with search, category filtering, price/rating sorting, and `Cache-Control` CDN headers.
+- **Dynamic Product Slug Route Handler (`app/api/products/[slug]/route.ts`):** Created GET endpoint unwrapping Next.js 16 async `context.params` with 404 error handling.
+- **Zero-Trust Secure Order API (`app/api/orders/route.ts`):** Created POST endpoint that re-verifies prices against the server database to prevent client tampering, computes verified sales tax (8%), generates carrier tracking codes, and returns HTTP 201 Created.
+- **React 19 / Next.js 16 Server Actions (`app/actions/orderActions.ts`):** Built `"use server"` actions for checkout mutations and newsletter form handling without manual REST boilerplate.
+- **Frontend-to-Backend Integration (`CheckoutModal.tsx`):** Updated checkout form to dispatch real `POST /api/orders` HTTP network calls with offline fallback recovery.
+- **Master Deployment & Backend Guide (`DEPLOYMENT_AND_BACKEND_GUIDE.md`):** Authored an exhaustive full-stack manual covering client vs server mental models, Vercel Git-integrated hosting (free), environment variables, serverless functions, and Docker containers.
 
 ---
 
 ## 💡 Senior Technical Interview Reference
 
-> **Q1: How do you design a robust multi-step form workflow in React/Next.js without data loss between steps?**  
-> *Answer:* We implement a controlled state machine pattern where the active step (`currentStep: 1 | 2 | 3`) controls which view is visible, while form data for all steps is held in parent component state. By isolating step navigation from form submission, users can navigate backward to edit previous inputs without losing their entered data. Furthermore, step transition functions act as "validation gates", ensuring a user cannot advance until all required fields of the current step pass validation.
+> **Q1: Why should an e-commerce backend never trust item prices sent from the client-side checkout form?**  
+> *Answer:* Client-side state lives in an untrusted environment (the user's browser). Anyone can inspect DevTools or modify HTTP request payloads to alter an item's price (e.g. changing \$299 to \$0.01). A secure backend must treat all incoming prices as zero-trust, look up each product ID in the server database, recompute verified totals and sales taxes on the server, and only authorize the verified server amount.
 
-> **Q2: In Next.js 15 and 16, why is `params` in dynamic page routes typed as a Promise, and how do you handle it?**  
-> *Answer:* Next.js App Router now treats request-specific parameters (such as `params` and `searchParams`) as asynchronous Promises to allow the framework to optimize streaming and partial prerendering (PPR). Dynamic server components must declare `params: Promise<{ orderNumber: string }>` and asynchronously unwrap it using `const { orderNumber } = await params;` before reading path variables.
+> **Q2: What is the architectural difference between Next.js Route Handlers (`route.ts`) and Server Actions (`"use server"`)?**  
+> *Answer:* Route Handlers expose standard HTTP REST endpoints (GET, POST, PUT, DELETE) that return JSON via `NextResponse.json()`. They are essential for public APIs, mobile apps, and webhooks. Server Actions, on the other hand, are RPC (Remote Procedure Call) functions executed on the server and callable directly from React components. They eliminate boilerplate fetch calls, provide automatic end-to-end TypeScript safety, and integrate with React 19 form actions.
 
-> **Q3: How do you handle client-side receipt rendering when a user visits a dynamic order URL directly without local state?**  
-> *Answer:* We employ graceful fallback degradation. When a user navigates to `/orders/[orderNumber]`, the component attempts to look up the order in `useAuthStore.orders`. If the array does not contain that record (such as opening the URL in an incognito window or sharing a demo link), the view constructs a typed fallback order record with that exact order number. This guarantees that the UI never crashes or displays a broken blank screen during demos or evaluations.
+> **Q3: How does Vercel host a Next.js application differently from a traditional Node.js Express server?**  
+> *Answer:* A traditional Express server runs as a continuous long-lived process on a single machine (e.g. EC2/VPS). Vercel uses a **hybrid serverless architecture**: static pages and client assets are pre-rendered at build time and cached across a global Edge CDN, while dynamic API routes and Server Actions are compiled into isolated **Serverless Functions** (AWS Lambda). These functions spin up on demand in milliseconds, scale horizontally to handle traffic spikes, and scale down to zero when idle with zero maintenance overhead.
