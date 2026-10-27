@@ -23,6 +23,7 @@ import { useCartStore } from "../../store/useCartStore";
 import { useWishlistStore } from "../../store/useWishlistStore";
 import { useCompareStore } from "../../store/useCompareStore";
 import { useAuthStore } from "../../store/useAuthStore";
+import { useAIStore } from "../../store/useAIStore";
 
 interface HeaderProps {
   onOpenSearch?: () => void;
@@ -37,6 +38,7 @@ export default function Header({ onOpenSearch }: HeaderProps) {
   const { getTotalWishlistItems, openWishlist } = useWishlistStore();
   const { getCompareCount, openCompare } = useCompareStore();
   const { user, isAuthenticated, openAuthModal, openAccountDrawer } = useAuthStore();
+  const { openAICopilot } = useAIStore();
 
   useEffect(() => {
     setIsMounted(true);
@@ -150,6 +152,19 @@ export default function Header({ onOpenSearch }: HeaderProps) {
               <span className="hidden sm:inline">Sign In</span>
             </button>
           )}
+
+          {/* Autonomous AI Shopping Copilot Trigger Button */}
+          <button
+            onClick={openAICopilot}
+            aria-label="Open AI Shopping Copilot"
+            className="relative py-2 px-3 rounded-xl bg-gradient-to-r from-violet-600/20 via-fuchsia-600/20 to-indigo-600/20 hover:from-violet-600/40 hover:via-fuchsia-600/40 hover:to-indigo-600/40 border border-violet-500/40 hover:border-violet-400 text-xs text-white font-bold transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5 shadow-md shadow-violet-600/10 cursor-pointer"
+            title="Ask NOVA Cortex AI"
+          >
+            <span className="text-sm animate-pulse">✨</span>
+            <span className="hidden sm:inline bg-gradient-to-r from-violet-200 via-white to-fuchsia-200 bg-clip-text text-transparent">
+              Ask AI
+            </span>
+          </button>
 
           {/* Shopping Bag Button */}
           <button

@@ -24,6 +24,7 @@ import { useCartStore } from "../../store/useCartStore";
 import { useWishlistStore } from "../../store/useWishlistStore";
 import { useCompareStore } from "../../store/useCompareStore";
 import { useRecentlyViewedStore } from "../../store/useRecentlyViewedStore";
+import { useAIStore } from "../../store/useAIStore";
 import ColorSwatchPicker from "./ColorSwatchPicker";
 
 interface AddToCartButtonProps {
@@ -36,6 +37,7 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
   const { toggleWishlist, isInWishlist } = useWishlistStore();
   const { toggleCompare, isInCompare } = useCompareStore();
   const { addViewedProduct } = useRecentlyViewedStore();
+  const { askAboutProduct } = useAIStore();
 
   // Local React State
   const [quantity, setQuantity] = useState(1);
@@ -151,6 +153,17 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
           <span>{isCompared ? "✓ In Compare Matrix" : "⇄ Add to Compare"}</span>
         </button>
       </div>
+
+      {/* 4. Autonomous AI Copilot Consultation CTA */}
+      <button
+        type="button"
+        onClick={() => askAboutProduct(product)}
+        className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-violet-950/40 via-fuchsia-950/30 to-indigo-950/40 hover:from-violet-900/60 hover:to-indigo-900/60 border border-violet-800/50 hover:border-violet-500 text-xs font-bold text-violet-300 hover:text-white transition-all flex items-center justify-center gap-2 group cursor-pointer"
+      >
+        <span className="text-sm group-hover:scale-125 transition-transform animate-pulse">✨</span>
+        <span>Ask AI about {product.name} highlights & specs</span>
+        <span>➔</span>
+      </button>
     </div>
   );
 }

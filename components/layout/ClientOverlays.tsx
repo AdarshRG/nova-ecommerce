@@ -25,6 +25,7 @@ import ProductCompareDrawer from "../compare/ProductCompareDrawer";
 import QuickViewModal from "../catalog/QuickViewModal";
 import AuthModal from "../auth/AuthModal";
 import AccountDrawer from "../auth/AccountDrawer";
+import AICopilotDrawer from "../ai/AICopilotDrawer";
 
 export default function ClientOverlays() {
   // Modal visibility states
@@ -68,6 +69,9 @@ export default function ClientOverlays() {
         isOpen={isCheckoutOpen}
         onClose={() => setIsCheckoutOpen(false)}
       />
+
+      {/* 11. Autonomous AI Shopping Copilot Slide-Over Drawer */}
+      <AICopilotDrawer />
     </>
   );
 }
