@@ -126,7 +126,11 @@ flowchart TD
 
 Follow this 22-step sequence when opening files in VS Code to learn the full-stack AI codebase:
 
-1. **[types/ai.ts](file:///D:/NOVA%20Project/nova-ecommerce/types/ai.ts):** Study AI contracts — understand `ChatMessage`, `AIToolCall`, `AISuggestedAction`, and structured JSON output schemas.
+1. **[hooks/useDebounce.ts](file:///D:/NOVA%20Project/nova-ecommerce/hooks/useDebounce.ts):** Master JavaScript closures, `setTimeout`, `useEffect` cleanup functions, and TypeScript Generics (`<T>`) to throttle network requests.
+2. **[hooks/useAsync.ts](file:///D:/NOVA%20Project/nova-ecommerce/hooks/useAsync.ts):** Learn generic async state machines (`idle` | `pending` | `success` | `error`), type narrowing on errors (`err instanceof Error`), and memory leak prevention with `useRef`.
+3. **[lib/apiClient.ts](file:///D:/NOVA%20Project/nova-ecommerce/lib/apiClient.ts):** Study centralized HTTP clients, custom `ApiError` class, dynamic `URLSearchParams` query construction, and `AbortSignal` race condition prevention.
+4. **[components/catalog/SearchModal.tsx](file:///D:/NOVA%20Project/nova-ecommerce/components/catalog/SearchModal.tsx):** Study production-grade full-stack search integration with the 4 UI states (loading skeleton, error alert, empty state, and live success results).
+5. **[types/ai.ts](file:///D:/NOVA%20Project/nova-ecommerce/types/ai.ts):** Study AI contracts — understand `ChatMessage`, `AIToolCall`, `AISuggestedAction`, and structured JSON output schemas.
 2. **[app/api/ai/chat/route.ts](file:///D:/NOVA%20Project/nova-ecommerce/app/api/ai/chat/route.ts):** Master **RAG (Retrieval-Augmented Generation)** and **AI Tool Calling** — study how the backend retrieves factual database specs to prevent LLM hallucinations, and executes tools like `searchCatalog`, `compareSpecs`, and `trackOrder`.
 3. **[store/useAIStore.ts](file:///D:/NOVA%20Project/nova-ecommerce/store/useAIStore.ts):** Learn how conversational AI state, message history, active product context, and generation spinners are managed with Zustand.
 4. **[components/ai/AICopilotDrawer.tsx](file:///D:/NOVA%20Project/nova-ecommerce/components/ai/AICopilotDrawer.tsx):** Study AI UI engineering — see how tool execution badges, interactive product recommendation cards, and 1-click action chips are embedded in the chat stream.
@@ -174,9 +178,26 @@ Follow this 22-step sequence when opening files in VS Code to learn the full-sta
 - **Headless AI Copilot Drawer (`components/ai/AICopilotDrawer.tsx`):** Built slide-over interface displaying tool execution badges, interactive embedded recommendation cards with 1-click "Add to Bag", action chips, and starter prompts.
 - **Storefront & PDP AI Integrations:** Added `✨ Ask AI` copilot launcher to `Header.tsx`, mounted drawer in `ClientOverlays.tsx`, and added product context consultation button to `AddToCartButton.tsx`.
 
+### ✅ Day 12: Core Frontend Engineering — TypeScript Generics, Custom React Hooks & Resilient 4-State API Search
+- **Generic Debounce Hook (`hooks/useDebounce.ts`):** Built generic `<T>` debouncing hook to throttle network requests, explaining closures, `setTimeout`, event loop scheduling, and React `useEffect` cleanup execution.
+- **Generic Async State Machine Hook (`hooks/useAsync.ts`):** Created reusable hook managing `idle` | `pending` | `success` | `error` states, type narrowing error catches (`err instanceof Error`), and preventing memory leaks via `isMountedRef`.
+- **Type-Safe API Client (`lib/apiClient.ts`):** Created centralized HTTP client with custom `ApiError` class, dynamic query string builder (`URLSearchParams`), and `AbortSignal` race condition prevention.
+- **Resilient Full-Stack Search Modal (`components/catalog/SearchModal.tsx`):** Connected the Command-K search bar to `fetchProductsApi` with a 300ms debounce, handling the 4 critical UI states (loading skeleton shimmer, offline/error alert, empty state with filter reset, and live server results).
+
 ---
 
 ## 💡 Senior Technical Interview Reference
+
+> **Q1: How does a debounced custom React hook leverage JavaScript closures and effect cleanups?**  
+> *Answer:* A debounce hook schedules state updates using `setTimeout(..., delay)`. Because of JavaScript closures, the timer callback retains reference to the `value` passed during that render. If the user changes `value` before the delay expires (e.g. typing another letter), React re-executes the effect. Crucially, before running the new effect, React invokes the previous effect's **cleanup function** (`clearTimeout(timerId)`), cancelling the outdated timer and ensuring only the final idle value triggers a re-render and network request.
+
+> **Q2: Why are TypeScript Generics (`<T>`) preferred over `any` when building custom hooks and API clients?**  
+> *Answer:* Using `any` completely disables the TypeScript type checker, introducing runtime crash vulnerabilities. A Generic `<T>` acts as a type variable that preserves the exact type contract through the function. If you pass a `string` to `useDebounce<string>()`, the return value is strictly typed as a `string`. If you pass a complex object or interface, TypeScript validates all properties downstream with full IDE autocompletion and compile-time verification.
+
+> **Q3: How do you prevent network race conditions when users type into an asynchronous search bar?**  
+> *Answer:* We combine two techniques:  
+> 1. **Debouncing:** Pauses request dispatch until the user finishes typing (e.g. 300ms).  
+> 2. **AbortController:** Before firing a new `fetch()` call, we invoke `abortController.abort()` on the previous request. If network latency causes an earlier request to arrive *after* a newer request, the browser discards the aborted response, preventing stale data from overwriting fresh search results.
 
 > **Q1: What is Retrieval-Augmented Generation (RAG) and why is it essential for e-commerce AI applications?**  
 > *Answer:* Standard LLMs suffer from knowledge cutoffs and hallucinations—they cannot know your real-time warehouse inventory, current pricing, or order statuses. RAG fixes this by intercepting user queries, querying the internal store database (retrieval step), augmenting the prompt with the exact verified catalog records (augmentation step), and prompting the model to answer based strictly on those factual chunks (generation step). This ensures 100% pricing accuracy, prevents false claims, and grounds the AI in real catalog data.
