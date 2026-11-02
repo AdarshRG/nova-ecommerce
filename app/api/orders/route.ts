@@ -1,28 +1,26 @@
 // ==============================================================================
 // FILE: app/api/orders/route.ts
-// ARCHITECTURE ROLE: Enterprise Order Processing & Server-Side Security Endpoint
+// ARCHITECTURE ROLE: Enterprise Order Processing, Rate Limiting & Schema-Validated Endpoint
 //
-// 🎓 BEGINNER'S GUIDE TO SECURE BACKEND ORDER PROCESSING:
-//   Why must orders be processed on the Backend Server?
-//     Rule #1 of Web Security: "NEVER TRUST THE CLIENT."
-//     If the frontend calculates the price and sends `total: $10`, a hacker could open
-//     their browser DevTools, edit JavaScript, and send `total: $0.01`!
-//
-//   What does this Backend Route Handler do?
-//     1. Receives the checkout payload: items, address, and delivery speed.
-//     2. SERVER-SIDE PRICE VERIFICATION:
-//        It queries each product directly from the server catalog and recalculates the
-//        real price. Any client-side price tampering is completely ignored!
-//     3. Validates required address and contact fields.
-//     4. Generates an official server-certified Order ID (`NV-XXXX`) and tracking number.
-//     5. Calculates verified sales tax (8%) and final total.
-//     6. Returns HTTP 201 Created with the verified order receipt!
+// 🎓 BEGINNER'S GUIDE TO ENTERPRISE BACKEND ARCHITECTURE:
+//   What does this endpoint do?
+//     1. RATE LIMITING (DDoS Protection):
+//        Limits orders to 20 attempts per minute per IP to prevent credit card testing bots.
+//     2. RUNTIME SCHEMA VALIDATION:
+//        Uses `validateOrderSubmission()` to ensure every field (Email, Street, Postal Code,
+//        Payment Method, Item array) conforms strictly to enterprise rules before processing.
+//     3. ZERO-TRUST SERVER-SIDE RECALCULATION:
+//        Looks up genuine prices in the database catalog to prevent client tampering.
+//     4. ORDER CREATION:
+//        Calculates verified tax, generates order ID (`NV-XXXX`), and returns HTTP 201 Created.
 // ==============================================================================
 
 import { NextRequest, NextResponse } from "next/server";
 import { PRODUCTS } from "../../../data/products";
 import { Order, ShippingTier, PaymentInfo } from "../../../types/auth";
-import { CartItem, AddressFormData } from "../../../types/product";
+import { CartItem } from "../../../types/product";
+import { validateOrderSubmission } from "../../../lib/validators";
+import { checkRateLimit } from "../../../lib/security";
 
 // In-memory server orders store (simulates a database table)
 const SERVER_ORDERS_DATABASE: Order[] = [];
@@ -54,80 +52,105 @@ const SERVER_SHIPPING_CONFIG: Record<
 
 /**
  * POST /api/orders
- * Receives customer checkout data, verifies pricing against server catalog, and logs order.
+ * Receives customer checkout data, validates schema, verifies prices against server catalog, and logs order.
  */
 export async function POST(request: NextRequest) {
   try {
-    // 1. Parse JSON body sent from client
-    const body = await request.json();
-    const { items, address, shippingTierId, paymentMethod, promoCode } = body;
+    // --------------------------------------------------------------------------
+    // 1. RATE LIMITING: 20 order attempts per minute per IP
+    // --------------------------------------------------------------------------
+    const clientIp =
+      request.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
+      "anonymous-client";
 
-    // 2. Validate Cart Items presence
-    if (!items || !Array.isArray(items) || items.length === 0) {
+    const rateLimit = checkRateLimit(`order_${clientIp}`, 20, 60 * 1000);
+
+    if (!rateLimit.allowed) {
       return NextResponse.json(
-        { success: false, error: "Cannot process an empty order bag." },
+        {
+          success: false,
+          error: `Too many checkout attempts. Please wait ${rateLimit.resetInSeconds} seconds before trying again.`,
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": `${rateLimit.resetInSeconds}`,
+          },
+        }
+      );
+    }
+
+    // --------------------------------------------------------------------------
+    // 2. RUNTIME SCHEMA VALIDATION
+    // --------------------------------------------------------------------------
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return NextResponse.json(
+        { success: false, error: "Malformed JSON request body." },
         { status: 400 }
       );
     }
 
-    // 3. Validate Address Data
-    const addr = address as AddressFormData;
-    if (
-      !addr ||
-      !addr.fullName?.trim() ||
-      !addr.email?.trim() ||
-      !addr.streetAddress?.trim() ||
-      !addr.city?.trim() ||
-      !addr.postalCode?.trim()
-    ) {
+    const validation = validateOrderSubmission(rawBody);
+
+    if (!validation.success) {
       return NextResponse.json(
         {
           success: false,
-          error: "Missing required shipping address fields (Name, Email, Street, City, ZIP).",
+          error: "Order validation failed. Please check your submitted inputs.",
+          fieldErrors: validation.errors,
         },
         { status: 400 }
       );
     }
 
-    // 4. SERVER-SIDE RECALCULATION & FRAUD PREVENTION:
-    // Look up each item in the official server catalog to determine genuine unit price.
+    // Extract validated & sanitized payload
+    const { items, address, shippingTierId, paymentMethod, promoCode } = validation.data;
+
+    // --------------------------------------------------------------------------
+    // 3. SERVER-SIDE RECALCULATION & FRAUD PREVENTION (Zero-Trust Security)
+    // --------------------------------------------------------------------------
     let verifiedSubtotal = 0;
     const verifiedOrderItems: CartItem[] = [];
 
     for (const item of items) {
-      const serverProduct = PRODUCTS.find((p) => p.id === item.product.id);
+      const serverProduct = PRODUCTS.find((p) => p.id === item.productId);
+
       if (!serverProduct) {
         return NextResponse.json(
           {
             success: false,
-            error: `Product with ID '${item.product.id}' is invalid or no longer available.`,
+            error: `Product with ID '${item.productId}' is invalid or no longer exists.`,
           },
           { status: 400 }
         );
       }
 
-      // Check warehouse stock on the server
+      // Warehouse stock check
       if (!serverProduct.inStock) {
         return NextResponse.json(
           {
             success: false,
-            error: `${serverProduct.name} is currently out of stock.`,
+            error: `${serverProduct.name} is currently out of stock in our fulfillment warehouse.`,
           },
           { status: 400 }
         );
       }
 
-      const verifiedQuantity = Math.max(1, Math.floor(item.quantity || 1));
-      verifiedSubtotal += serverProduct.price * verifiedQuantity;
+      verifiedSubtotal += serverProduct.price * item.quantity;
 
       verifiedOrderItems.push({
         product: serverProduct,
-        quantity: verifiedQuantity,
+        quantity: item.quantity,
         selectedColor: item.selectedColor,
       });
     }
 
-    // 5. Calculate Server-Verified Shipping Tier Price
+    // --------------------------------------------------------------------------
+    // 4. SHIPPING TIER PRICING CALCULATION
+    // --------------------------------------------------------------------------
     const tierConfig = SERVER_SHIPPING_CONFIG[shippingTierId] || SERVER_SHIPPING_CONFIG.standard;
     let shippingPrice = tierConfig.basePrice;
 
@@ -137,14 +160,16 @@ export async function POST(request: NextRequest) {
     }
 
     const shippingTierRecord: ShippingTier = {
-      id: (shippingTierId as "standard" | "express" | "overnight") || "standard",
+      id: shippingTierId,
       name: tierConfig.name,
       estimate: tierConfig.estimate,
       price: shippingPrice,
       description: tierConfig.description,
     };
 
-    // 6. Calculate Server Promo Discount
+    // --------------------------------------------------------------------------
+    // 5. PROMO DISCOUNT VERIFICATION
+    // --------------------------------------------------------------------------
     let discount = 0;
     if (promoCode === "NOVA20") {
       discount = +(verifiedSubtotal * 0.2).toFixed(2);
@@ -152,12 +177,16 @@ export async function POST(request: NextRequest) {
       discount = +(verifiedSubtotal * 0.1).toFixed(2);
     }
 
-    // 7. Calculate Server Tax (8%) & Final Verified Total
+    // --------------------------------------------------------------------------
+    // 6. TAX (8%) & FINAL VERIFIED TOTAL
+    // --------------------------------------------------------------------------
     const taxableSubtotal = Math.max(0, verifiedSubtotal - discount);
     const tax = +(taxableSubtotal * 0.08).toFixed(2);
     const verifiedTotal = +(taxableSubtotal + shippingPrice + tax).toFixed(2);
 
-    // 8. Generate Unique Order Receipt Identifiers
+    // --------------------------------------------------------------------------
+    // 7. ORDER CODE GENERATION & RECORD LOGGING
+    // --------------------------------------------------------------------------
     const orderNumber = `NV-${Math.floor(1000 + Math.random() * 9000)}`;
     const trackingNumber = `TRK-NV-${Math.floor(100000 + Math.random() * 900000)}`;
     const deliveryDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString("en-US", {
@@ -167,13 +196,12 @@ export async function POST(request: NextRequest) {
     });
 
     const paymentInfoRecord: PaymentInfo = {
-      method: paymentMethod || "card",
+      method: paymentMethod,
       cardBrand: paymentMethod === "card" ? "Visa" : undefined,
       cardLast4: paymentMethod === "card" ? "4242" : undefined,
-      cardHolder: addr.fullName,
+      cardHolder: address.fullName,
     };
 
-    // 9. Construct the Official Order Record
     const newOrder: Order = {
       id: `ord-${Date.now()}`,
       orderNumber,
@@ -188,21 +216,28 @@ export async function POST(request: NextRequest) {
       tax,
       total: verifiedTotal,
       status: "Processing",
-      shippingAddress: addr,
+      shippingAddress: address,
       estimatedDelivery: deliveryDate,
     };
 
     // Save in server database memory
     SERVER_ORDERS_DATABASE.unshift(newOrder);
 
-    // 10. Return HTTP 201 Created response
+    // --------------------------------------------------------------------------
+    // 8. RETURN HTTP 201 CREATED
+    // --------------------------------------------------------------------------
     return NextResponse.json(
       {
         success: true,
         message: "Order successfully authorized and created on the backend.",
         order: newOrder,
       },
-      { status: 201 }
+      {
+        status: 201,
+        headers: {
+          "X-RateLimit-Remaining": `${rateLimit.remaining}`,
+        },
+      }
     );
   } catch (error) {
     console.error("Error in POST /api/orders:", error);

@@ -23,6 +23,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { PRODUCTS, getProductBySlug } from "@/data/products";
 import { Product } from "@/types/product";
 import { AIChatRequest, AIChatResponse, AIToolCall, AISuggestedAction } from "@/types/ai";
+import { evaluatePromptSecurity, checkRateLimit } from "@/lib/security";
 
 // ------------------------------------------------------------------------------
 // RAG RETRIEVAL UTILITY
@@ -69,6 +70,41 @@ export async function POST(request: NextRequest) {
 
     const latestUserMessage = messages[messages.length - 1].content.trim();
     const cleanQuery = latestUserMessage.toLowerCase();
+
+    // --------------------------------------------------------------------------
+    // 1. RATE LIMITING: Max 15 AI reasoning requests per minute per IP
+    // --------------------------------------------------------------------------
+    const clientIp =
+      request.headers.get("x-forwarded-for")?.split(",")[0].trim() || "client-ai";
+    const rateLimit = checkRateLimit(`ai_${clientIp}`, 15, 60 * 1000);
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `AI query limit reached. Please wait ${rateLimit.resetInSeconds} seconds before sending another prompt.`,
+        },
+        { status: 429, headers: { "Retry-After": `${rateLimit.resetInSeconds}` } }
+      );
+    }
+
+    // --------------------------------------------------------------------------
+    // 2. PROMPT INJECTION & JAILBREAK GUARDRAILS
+    // --------------------------------------------------------------------------
+    const securityCheck = evaluatePromptSecurity(latestUserMessage);
+    if (!securityCheck.isSafe) {
+      return NextResponse.json(
+        {
+          success: true,
+          message:
+            "🛡️ **Defensive Guardrail Alert:** Your inquiry was flagged by our security filter. I am configured exclusively as NOVA's Hardware Shopping Concierge. I cannot execute system prompt overrides or unrestricted developer mode commands.",
+          toolCalls: [],
+          recommendedProducts: [],
+          suggestedActions: [],
+        },
+        { status: 200 }
+      );
+    }
 
     // Initialize agent tracking structures
     const executedTools: AIToolCall[] = [];
