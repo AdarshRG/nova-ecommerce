@@ -1,27 +1,23 @@
 // ==============================================================================
 // FILE: app/api/products/route.ts
-// ARCHITECTURE ROLE: RESTful Backend API Endpoint for Product Catalog (Backed by Database Layer)
+// ARCHITECTURE ROLE: High-Performance Caching RESTful API Endpoint (Redis Cache-Aside Pattern)
 //
-// 🎓 BEGINNER'S GUIDE TO DATABASE-DRIVEN ROUTE HANDLERS:
-//   What is this endpoint?
-//     This endpoint answers HTTP `GET /api/products`.
-//     Instead of manipulating arrays directly in the route handler, it delegates queries
-//     to our centralized Database Service layer (`lib/db.ts`).
-//
-//   Why delegate to `db.product.findMany()`?
-//     1. Clean Architecture: Keeps the HTTP layer thin (parsing request params and returning JSON).
-//     2. Scalability: When connecting to PostgreSQL via Prisma, only `lib/db.ts` interacts with the ORM.
-//     3. Testability: You can easily mock `db` without spinning up HTTP servers.
+// 🎓 BEGINNER'S GUIDE TO THE CACHE-ASIDE PATTERN:
+//   How does this endpoint work?
+//     1. Check Cache: Constructs a unique key like `catalog:s=sonic:c=audio:srt=featured`.
+//     2. Cache HIT: If Redis contains the data, returns it immediately (<2ms latency)
+//        with the header `X-Cache: HIT`. No database query is made!
+//     3. Cache MISS: If Redis doesn't have it, queries PostgreSQL/Prisma (`db.product.findMany()`),
+//        stores the result in Redis with a 60-second TTL, and returns with `X-Cache: MISS`.
 // ==============================================================================
 
 import { NextRequest, NextResponse } from "next/server";
 import { db, ProductQueryFilters } from "../../../lib/db";
+import { redis, cacheKeys } from "../../../lib/redis";
 
-/**
- * GET Handler for /api/products
- * Reads URL search query parameters, delegates to database repository, and returns JSON.
- */
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+
   try {
     // 1. Extract URL search parameters
     const { searchParams } = new URL(request.url);
@@ -29,33 +25,61 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get("category")?.trim() || "";
     const sort = (searchParams.get("sort") || "featured") as ProductQueryFilters["sort"];
 
-    // 2. Query our Database Repository Layer
+    // 2. Generate deterministic cache key
+    const cacheKey = cacheKeys.catalog(search, category, sort);
+
+    // --------------------------------------------------------------------------
+    // 3. STEP 1: CHECK REDIS CACHE (Cache-Aside Pattern)
+    // --------------------------------------------------------------------------
+    const cachedData = await redis.get<Record<string, unknown>>(cacheKey);
+
+    if (cachedData) {
+      const responseTime = Date.now() - startTime;
+      return NextResponse.json(cachedData, {
+        status: 200,
+        headers: {
+          "X-Cache": "HIT",
+          "X-Response-Time": `${responseTime}ms`,
+          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+        },
+      });
+    }
+
+    // --------------------------------------------------------------------------
+    // 4. STEP 2: CACHE MISS ➔ QUERY DATABASE LAYER
+    // --------------------------------------------------------------------------
     const { products, totalCount } = await db.product.findMany({
       search,
       category,
       sort,
     });
 
-    // 3. Return JSON response with Cache-Control headers for Edge CDN caching
-    return NextResponse.json(
-      {
-        success: true,
-        count: products.length,
-        totalCatalog: totalCount,
-        filtersApplied: {
-          search: search || null,
-          category: category || null,
-          sort,
-        },
-        data: products,
+    const responsePayload = {
+      success: true,
+      count: products.length,
+      totalCatalog: totalCount,
+      filtersApplied: {
+        search: search || null,
+        category: category || null,
+        sort,
       },
-      {
-        status: 200,
-        headers: {
-          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
-        },
-      }
-    );
+      data: products,
+    };
+
+    // --------------------------------------------------------------------------
+    // 5. STEP 3: STORE IN REDIS WITH 60-SECOND TTL
+    // --------------------------------------------------------------------------
+    await redis.set(cacheKey, responsePayload, 60);
+
+    const responseTime = Date.now() - startTime;
+    return NextResponse.json(responsePayload, {
+      status: 200,
+      headers: {
+        "X-Cache": "MISS",
+        "X-Response-Time": `${responseTime}ms`,
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+      },
+    });
   } catch (error) {
     console.error("Error in GET /api/products:", error);
     return NextResponse.json(

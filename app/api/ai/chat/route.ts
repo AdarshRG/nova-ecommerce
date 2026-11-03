@@ -24,6 +24,7 @@ import { PRODUCTS, getProductBySlug } from "@/data/products";
 import { Product } from "@/types/product";
 import { AIChatRequest, AIChatResponse, AIToolCall, AISuggestedAction } from "@/types/ai";
 import { evaluatePromptSecurity, checkRateLimit } from "@/lib/security";
+import { redis, cacheKeys } from "@/lib/redis";
 
 // ------------------------------------------------------------------------------
 // RAG RETRIEVAL UTILITY
@@ -104,6 +105,23 @@ export async function POST(request: NextRequest) {
         },
         { status: 200 }
       );
+    }
+
+    // --------------------------------------------------------------------------
+    // 3. SEMANTIC AI PROMPT CACHING (Redis Cache-Aside Pattern)
+    // Avoids redundant LLM reasoning and achieves sub-5ms response for repeat queries
+    // --------------------------------------------------------------------------
+    const aiCacheKey = cacheKeys.aiPrompt(latestUserMessage);
+    const cachedAIResponse = await redis.get<AIChatResponse>(aiCacheKey);
+
+    if (cachedAIResponse) {
+      return NextResponse.json(cachedAIResponse, {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "X-Cache": "HIT",
+        },
+      });
     }
 
     // Initialize agent tracking structures
@@ -247,10 +265,16 @@ export async function POST(request: NextRequest) {
       suggestedActions,
     };
 
+    // Cache general catalog reasoning in Redis (10-minute TTL = 600s)
+    if (!orderMatch) {
+      await redis.set(aiCacheKey, responsePayload, 600);
+    }
+
     return NextResponse.json(responsePayload, {
       status: 200,
       headers: {
         "Content-Type": "application/json",
+        "X-Cache": "MISS",
       },
     });
   } catch (error) {

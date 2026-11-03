@@ -29,6 +29,7 @@
 * [Day 12: Core Frontend Engineering — TypeScript Generics, Custom Hooks & 4-State Search](#-day-12-core-frontend-engineering--typescript-generics-custom-hooks--4-state-search)
 * [Day 13: Enterprise Schema Validation, Defensive Security & Next.js Edge Middleware](#-day-13-enterprise-schema-validation-defensive-security--nextjs-edge-middleware)
 * [Day 14: Relational Database & ORM Layer — PostgreSQL, Prisma & Singleton Connection Pools](#-day-14-relational-database--orm-layer--postgresql-prisma--singleton-connection-pools)
+* [Day 15: High-Performance Data Layer & AI Caching — Redis, Cache-Aside Pattern & Webhook Invalidation](#-day-15-high-performance-data-layer--ai-caching--redis-cache-aside-pattern--webhook-invalidation)
 
 ---
 
@@ -515,3 +516,48 @@
 
 > 🔴 **Senior Level:** How do relational Foreign Keys with `onDelete: Cascade` preserve relational integrity in an e-commerce order system, and why must `OrderItem.unitPrice` be stored separately from `Product.price`?  
 > *Answer:* Foreign keys enforce referential integrity at the database engine level, preventing orphaned rows (such as a review existing for a non-existent product). Setting `onDelete: Cascade` ensures that if a staging product is removed, its associated variant and review rows are automatically cleaned up in a single atomic transaction. Crucially, in an order system, `OrderItem.unitPrice` must snapshot the exact dollar amount paid at checkout. If the store manager changes `Product.price` in the catalog next week, past financial invoices must retain their historical price to prevent altering tax records and order totals.
+
+---
+
+<br />
+
+## 📅 Day 15: High-Performance Data Layer & AI Caching — Redis, Cache-Aside Pattern & Webhook Invalidation
+
+### 🛠️ 1. Architectural Overview & What We Built
+* Built the enterprise Redis-compatible high-speed caching engine in [`lib/redis.ts`](file:///D:/NOVA%20Project/nova-ecommerce/lib/redis.ts) supporting the **Cache-Aside Pattern**, TTL expirations, prefix purging, and observability metrics (hits, misses, hit ratio).
+* Upgraded [`app/api/products/route.ts`](file:///D:/NOVA%20Project/nova-ecommerce/app/api/products/route.ts) with the **Cache-Aside Pattern**:
+  - Checks Redis for cached queries; on **Cache HIT**, returns response in sub-2ms with header `X-Cache: HIT`.
+  - On **Cache MISS**, queries database repository, stores result in Redis with a 60-second TTL, and returns with `X-Cache: MISS`.
+* Built **Semantic AI Prompt Caching** in [`app/api/ai/chat/route.ts`](file:///D:/NOVA%20Project/nova-ecommerce/app/api/ai/chat/route.ts):
+  - Normalizes customer prompts into hash keys (`ai:prompt:...`) and caches AI reasoning with a 10-minute (600s) TTL.
+  - Eliminates 1.5–3.0 second LLM network latencies and reduces LLM API token costs to \$0 for repeat inquiries.
+* Built the headless event-driven cache invalidation webhook in [`app/api/webhooks/inventory/route.ts`](file:///D:/NOVA%20Project/nova-ecommerce/app/api/webhooks/inventory/route.ts):
+  - Authenticates incoming external warehouse/BigCommerce webhook signatures (`x-webhook-secret`).
+  - Automatically purges stale catalog keys (`redis.delByPrefix("catalog:")`) and AI prompt caches immediately upon inventory changes.
+
+<br />
+
+### 📖 2. Key Concepts & Definitions Glossary
+
+| Technical Term | Beginner-Friendly Definition & Explanation |
+| :--- | :--- |
+| **Redis** | An ultra-fast, in-memory key-value data store that keeps data in computer RAM rather than disk SSDs, delivering sub-millisecond (1–3ms) read/write performance. |
+| **Cache-Aside Pattern (Lazy Loading)** | An architecture where the application queries the cache first. If data is found (Cache HIT), it returns immediately. If missing (Cache MISS), it queries the database, writes data into the cache for future requests, and returns it. |
+| **TTL (Time-To-Live)** | An expiration countdown (in seconds) assigned to cached data. Once the TTL expires, Redis automatically evicts the entry, guaranteeing data does not remain stale forever. |
+| **Semantic AI Prompt Caching** | Storing the structured outputs of LLM queries in Redis. Because LLM generation is slow and costs money per token, caching common queries yields instant 2ms responses with zero API costs. |
+| **Event-Driven Cache Invalidation** | Instantly deleting or updating cached keys when a write event happens (e.g. an order is placed or a warehouse webhook updates stock), ensuring the cache is never out of sync with the database. |
+| **Cache Stampede (Dogpiling)** | A performance crisis where a popular cache key expires under heavy traffic, causing thousands of simultaneous requests to hammer the database at the same instant. Prevented using lock mechanisms or probabilistic early expiration. |
+| **Webhook** | An automated HTTP POST message sent from an external service (like a warehouse ERP or BigCommerce) to our server when an event occurs, enabling real-time system synchronization. |
+
+<br />
+
+### 💡 3. Technical Interview Q&A (Beginner, Mid & Senior Levels)
+
+> 🟢 **Beginner Level:** What is Redis, and why is reading data from Redis faster than reading from a relational database like PostgreSQL?  
+> *Answer:* Redis is an in-memory key-value database, meaning all data resides directly in the computer's Random Access Memory (RAM). PostgreSQL stores data on disk (Solid State Drives - SSDs). Reading from RAM takes nanoseconds to microseconds, while reading from disk requires I/O operations and disk seeks taking tens of milliseconds. Redis is typically 10 to 50 times faster for reading cached objects.
+
+> 🟡 **Mid Level:** How does the Cache-Aside pattern work in Next.js API Route Handlers, and how do you handle cache invalidation when inventory changes?  
+> *Answer:* In Cache-Aside, the handler constructs a deterministic key (e.g. `catalog:search=audio`) and attempts `redis.get(key)`. If present (HIT), it returns immediately. If null (MISS), it queries the database, sets the key in Redis with a TTL (e.g. 60 seconds), and returns. To prevent stale data when inventory changes, we implement event-driven invalidation: when an inventory webhook or purchase occurs, the server explicitly calls `redis.delByPrefix("catalog:")` to flush outdated cache keys immediately.
+
+> 🔴 **Senior Level:** What is Semantic AI Prompt Caching, what are its financial/latency benefits, and what are its risks in an e-commerce assistant?  
+> *Answer:* Semantic AI Prompt Caching hashes normalized user prompts and stores the LLM's structured JSON response in Redis with a TTL. LLMs have high latency (1–3 seconds) and recurring per-token inference costs. Caching reduces response latency from 2,000ms down to 2ms and drops API token costs to \$0 for repeat inquiries. The primary risk is serving outdated or inappropriate context: if a cached answer mentions that a product is \$249 or has 5 units in stock, but warehouse stock dropped to 0, serving the cached prompt will mislead the customer. We mitigate this by: (1) keeping prompt TTL short (5–10 minutes), (2) purging `ai:prompt:` keys on inventory webhooks, and (3) excluding dynamic user-specific inquiries (like `trackOrder NV-XXXX`) from prompt caching.
