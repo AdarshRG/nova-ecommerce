@@ -1,23 +1,21 @@
 // ==============================================================================
 // FILE: app/api/products/[slug]/route.ts
-// ARCHITECTURE ROLE: RESTful Backend API Endpoint for Single Product by Slug
+// ARCHITECTURE ROLE: RESTful Backend API Endpoint for Single Product by Slug (Database Layer)
 //
 // 🎓 BEGINNER'S GUIDE TO DYNAMIC ROUTE HANDLERS:
 //   What is this endpoint?
 //     This endpoint responds to: `GET /api/products/[slug]`
 //     Example: `GET /api/products/nova-sonic-wireless`
 //
-//   How does dynamic routing work in Next.js 16 Route Handlers?
-//     1. Next.js maps the `[slug]` folder in the file path to the URL segment.
-//     2. In Next.js 16, dynamic params in Route Handlers are passed asynchronously as a Promise:
-//        `context: { params: Promise<{ slug: string }> }`
-//     3. We `await context.params` to retrieve the slug safely.
-//     4. If found, returns 200 OK with product details.
-//     5. If not found, returns 404 Not Found with a helpful error message.
+//   How it works:
+//     1. Next.js 16 passes dynamic route parameters as an async Promise in `context.params`.
+//     2. We unwrap the slug and call `await db.product.findBySlug(slug)`.
+//     3. If found, returns 200 OK with product data.
+//     4. If not found, returns 404 Not Found.
 // ==============================================================================
 
 import { NextRequest, NextResponse } from "next/server";
-import { getProductBySlug } from "../../../../data/products";
+import { db } from "../../../../lib/db";
 
 interface RouteContext {
   params: Promise<{ slug: string }>;
@@ -28,7 +26,7 @@ export async function GET(
   context: RouteContext
 ) {
   try {
-    // 1. Asynchronously unwrap the dynamic route parameter
+    // 1. Asynchronously unwrap dynamic route parameter
     const { slug } = await context.params;
 
     if (!slug) {
@@ -38,21 +36,21 @@ export async function GET(
       );
     }
 
-    // 2. Query the product from our database layer
-    const product = getProductBySlug(slug);
+    // 2. Query our Database Repository
+    const product = await db.product.findBySlug(slug);
 
-    // 3. Return 404 if product does not exist
+    // 3. Return 404 if not found in database
     if (!product) {
       return NextResponse.json(
         {
           success: false,
-          error: `Product with slug '${slug}' was not found in the catalog.`,
+          error: `Product with slug '${slug}' was not found in the database.`,
         },
         { status: 404 }
       );
     }
 
-    // 4. Return 200 OK with product data
+    // 4. Return 200 OK with product JSON
     return NextResponse.json(
       {
         success: true,
@@ -68,7 +66,7 @@ export async function GET(
   } catch (error) {
     console.error("Error in GET /api/products/[slug]:", error);
     return NextResponse.json(
-      { success: false, error: "Internal Server Error fetching product." },
+      { success: false, error: "Internal Server Error fetching product from database." },
       { status: 500 }
     );
   }

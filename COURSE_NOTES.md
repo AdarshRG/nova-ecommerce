@@ -28,6 +28,7 @@
 * [Day 11: Applied AI Engineering — Headless RAG & Autonomous Tool Calling Copilot](#-day-11-applied-ai-engineering--headless-rag--autonomous-tool-calling-copilot)
 * [Day 12: Core Frontend Engineering — TypeScript Generics, Custom Hooks & 4-State Search](#-day-12-core-frontend-engineering--typescript-generics-custom-hooks--4-state-search)
 * [Day 13: Enterprise Schema Validation, Defensive Security & Next.js Edge Middleware](#-day-13-enterprise-schema-validation-defensive-security--nextjs-edge-middleware)
+* [Day 14: Relational Database & ORM Layer — PostgreSQL, Prisma & Singleton Connection Pools](#-day-14-relational-database--orm-layer--postgresql-prisma--singleton-connection-pools)
 
 ---
 
@@ -471,3 +472,46 @@
 
 > 🔴 **Senior Level:** How does prompt injection work against an AI shopping copilot, how do you mitigate it, and what role does Next.js Edge Middleware play in full-stack security?  
 > *Answer:* Prompt injection occurs when user inputs manipulate the LLM into disregarding its system prompt (e.g., instructing the model to generate unauthorized 100% discount codes or reveal private instructions). Mitigation requires defense-in-depth: heuristic regex filters to catch known override keywords, strict structural role separation (`system` vs `user`), and never granting the AI direct write permissions to databases or payment authorizations without server-side validation. Next.js Edge Middleware acts as a unified reverse-proxy layer, centrally injecting OWASP security headers (`X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, HSTS) and tracking response latency across every route at the network edge.
+
+---
+
+<br />
+
+## 📅 Day 14: Relational Database & ORM Layer — PostgreSQL, Prisma & Singleton Connection Pools
+
+### 🛠️ 1. Architectural Overview & What We Built
+* Defined the complete relational schema in [`prisma/schema.prisma`](file:///D:/NOVA%20Project/nova-ecommerce/prisma/schema.prisma) with models for `Category`, `Product`, `ColorVariant`, `Review`, `User`, `Address`, `Order`, and `OrderItem`.
+* Implemented the **Prisma Client Singleton Pattern** and **Repository Layer** in [`lib/db.ts`](file:///D:/NOVA%20Project/nova-ecommerce/lib/db.ts) to prevent database connection exhaustion during Next.js Hot Module Reloading (HMR).
+* Created the automated database seeder script in [`prisma/seed.ts`](file:///D:/NOVA%20Project/nova-ecommerce/prisma/seed.ts) to populate initial hardware products, categories, specs, and verified reviews into relational tables.
+* Refactored our backend API Route Handlers:
+  - [`app/api/products/route.ts`](file:///D:/NOVA%20Project/nova-ecommerce/app/api/products/route.ts) now delegates catalog searches, category filters, and sorting to `db.product.findMany()`.
+  - [`app/api/products/[slug]/route.ts`](file:///D:/NOVA%20Project/nova-ecommerce/app/api/products/%5Bslug%5D/route.ts) now fetches single products using `db.product.findBySlug()`.
+  - [`app/api/orders/route.ts`](file:///D:/NOVA%20Project/nova-ecommerce/app/api/orders/route.ts) now creates and records zero-trust orders through `db.order.create()`.
+
+<br />
+
+### 📖 2. Key Concepts & Definitions Glossary
+
+| Technical Term | Beginner-Friendly Definition & Explanation |
+| :--- | :--- |
+| **ORM (Object-Relational Mapping)** | A software tool (like Prisma) that acts as a translator between relational SQL databases (tables, rows, foreign keys) and JavaScript/TypeScript objects, allowing you to query databases using clean functions instead of raw SQL strings. |
+| **Prisma Schema (`schema.prisma`)** | The single source of truth for your database architecture. It defines your tables (models), columns (fields), data types (String, Int, Float, DateTime), and relationships (1-to-many, 1-to-1). |
+| **Connection Pool Exhaustion** | Relational databases have a hard limit on simultaneous open connections (e.g. 50 or 100). If code opens new connections without reusing them, the pool runs out and crashes the server. |
+| **Prisma Client Singleton** | A Next.js design pattern where the Prisma client is stored on `globalThis` in development. This guarantees that Next.js Hot Module Reloading (HMR) reuses a single connection pool instead of opening dozens of new connections on every file save. |
+| **Foreign Key (`@relation`)** | A database column in one table (e.g. `categoryId` in `Product`) that points to the primary key of another table (e.g. `id` in `Category`), establishing a strict relational link between data. |
+| **Cascade Delete (`onDelete: Cascade`)** | A database integrity rule specifying that if a parent record is deleted (e.g. a `Product`), all child records linked to it (like its `Review` entries and `ColorVariant` options) are automatically deleted as well. |
+| **Database Seeding (`seed.ts`)** | An automated script that inserts starter data into an empty database so a newly cloned application or staging environment is immediately usable with test catalog items. |
+| **Repository Pattern** | An enterprise architecture design pattern that abstracts database operations behind a dedicated service object (`db.product`, `db.order`), keeping HTTP route handlers and UI components decoupled from database query syntax. |
+
+<br />
+
+### 💡 3. Technical Interview Q&A (Beginner, Mid & Senior Levels)
+
+> 🟢 **Beginner Level:** What is an ORM (Object-Relational Mapper) like Prisma, and why is it preferred over writing raw SQL strings?  
+> *Answer:* An ORM maps database tables into TypeScript objects. Instead of writing raw SQL strings like `"SELECT * FROM products WHERE price < 100;"` (which can have syntax typos and security vulnerabilities like SQL injection), Prisma lets you write `await prisma.product.findMany({ where: { price: { lt: 100 } } })`. This gives developers complete compile-time type checking, instant editor autocomplete, and protection against SQL injection attacks.
+
+> 🟡 **Mid Level:** Why is the Prisma Client Singleton pattern required when running Next.js in development mode?  
+> *Answer:* In development mode, Next.js clears Node.js module cache upon every code edit to enable Hot Module Reloading (HMR). If `const prisma = new PrismaClient()` is declared at module scope without a singleton, every file edit instantiates a new Prisma client instance with its own database connection pool. Within minutes, the PostgreSQL server exceeds its max connection limit and crashes with connection exhaustion. Attaching the client to `globalThis.__prisma` ensures the same connection pool is preserved and reused across hot reloads.
+
+> 🔴 **Senior Level:** How do relational Foreign Keys with `onDelete: Cascade` preserve relational integrity in an e-commerce order system, and why must `OrderItem.unitPrice` be stored separately from `Product.price`?  
+> *Answer:* Foreign keys enforce referential integrity at the database engine level, preventing orphaned rows (such as a review existing for a non-existent product). Setting `onDelete: Cascade` ensures that if a staging product is removed, its associated variant and review rows are automatically cleaned up in a single atomic transaction. Crucially, in an order system, `OrderItem.unitPrice` must snapshot the exact dollar amount paid at checkout. If the store manager changes `Product.price` in the catalog next week, past financial invoices must retain their historical price to prevent altering tax records and order totals.

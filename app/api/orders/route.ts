@@ -5,54 +5,24 @@
 // 🎓 BEGINNER'S GUIDE TO ENTERPRISE BACKEND ARCHITECTURE:
 //   What does this endpoint do?
 //     1. RATE LIMITING (DDoS Protection):
-//        Limits orders to 20 attempts per minute per IP to prevent credit card testing bots.
+//        Limits orders to 20 attempts per minute per IP to prevent spam and card testing bots.
 //     2. RUNTIME SCHEMA VALIDATION:
-//        Uses `validateOrderSubmission()` to ensure every field (Email, Street, Postal Code,
-//        Payment Method, Item array) conforms strictly to enterprise rules before processing.
-//     3. ZERO-TRUST SERVER-SIDE RECALCULATION:
-//        Looks up genuine prices in the database catalog to prevent client tampering.
-//     4. ORDER CREATION:
-//        Calculates verified tax, generates order ID (`NV-XXXX`), and returns HTTP 201 Created.
+//        Uses `validateOrderSubmission()` to verify address, item structures, and enums.
+//     3. DATABASE SERVICE DELEGATION (Repository Pattern):
+//        Calls `db.order.create()` to recalculate prices on the server, calculate verified tax,
+//        and persist the order invoice in the database.
+//     4. HTTP 201 RESPONSE:
+//        Returns the verified order receipt with rate-limit remaining headers.
 // ==============================================================================
 
 import { NextRequest, NextResponse } from "next/server";
-import { PRODUCTS } from "../../../data/products";
-import { Order, ShippingTier, PaymentInfo } from "../../../types/auth";
-import { CartItem } from "../../../types/product";
+import { db } from "../../../lib/db";
 import { validateOrderSubmission } from "../../../lib/validators";
 import { checkRateLimit } from "../../../lib/security";
 
-// In-memory server orders store (simulates a database table)
-const SERVER_ORDERS_DATABASE: Order[] = [];
-
-// Available shipping tiers configuration
-const SERVER_SHIPPING_CONFIG: Record<
-  string,
-  { name: string; estimate: string; basePrice: number; description: string }
-> = {
-  standard: {
-    name: "Standard Ground Delivery",
-    estimate: "3-5 Business Days",
-    basePrice: 15.0,
-    description: "Reliable carbon-neutral ground delivery by FedEx Ground.",
-  },
-  express: {
-    name: "Express Priority Air",
-    estimate: "1-2 Business Days",
-    basePrice: 25.0,
-    description: "Air courier priority routing with guaranteed delivery window.",
-  },
-  overnight: {
-    name: "Next-Day Morning Rush",
-    estimate: "Tomorrow by 10:30 AM",
-    basePrice: 45.0,
-    description: "Emergency overnight priority dispatch with signature on delivery.",
-  },
-};
-
 /**
  * POST /api/orders
- * Receives customer checkout data, validates schema, verifies prices against server catalog, and logs order.
+ * Receives customer checkout data, validates schema, verifies prices against database, and logs order.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -106,131 +76,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Extract validated & sanitized payload
-    const { items, address, shippingTierId, paymentMethod, promoCode } = validation.data;
-
     // --------------------------------------------------------------------------
-    // 3. SERVER-SIDE RECALCULATION & FRAUD PREVENTION (Zero-Trust Security)
+    // 3. DATABASE REPOSITORY DELEGATION (Zero-Trust Server Recalculation & Persist)
     // --------------------------------------------------------------------------
-    let verifiedSubtotal = 0;
-    const verifiedOrderItems: CartItem[] = [];
+    const result = await db.order.create(validation.data);
 
-    for (const item of items) {
-      const serverProduct = PRODUCTS.find((p) => p.id === item.productId);
-
-      if (!serverProduct) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: `Product with ID '${item.productId}' is invalid or no longer exists.`,
-          },
-          { status: 400 }
-        );
-      }
-
-      // Warehouse stock check
-      if (!serverProduct.inStock) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: `${serverProduct.name} is currently out of stock in our fulfillment warehouse.`,
-          },
-          { status: 400 }
-        );
-      }
-
-      verifiedSubtotal += serverProduct.price * item.quantity;
-
-      verifiedOrderItems.push({
-        product: serverProduct,
-        quantity: item.quantity,
-        selectedColor: item.selectedColor,
-      });
+    if (!result.success || !result.order) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: result.error || "Failed to create order record in database.",
+        },
+        { status: 400 }
+      );
     }
 
     // --------------------------------------------------------------------------
-    // 4. SHIPPING TIER PRICING CALCULATION
-    // --------------------------------------------------------------------------
-    const tierConfig = SERVER_SHIPPING_CONFIG[shippingTierId] || SERVER_SHIPPING_CONFIG.standard;
-    let shippingPrice = tierConfig.basePrice;
-
-    // Free standard ground shipping on orders $150 and above
-    if (shippingTierId === "standard" && verifiedSubtotal >= 150) {
-      shippingPrice = 0;
-    }
-
-    const shippingTierRecord: ShippingTier = {
-      id: shippingTierId,
-      name: tierConfig.name,
-      estimate: tierConfig.estimate,
-      price: shippingPrice,
-      description: tierConfig.description,
-    };
-
-    // --------------------------------------------------------------------------
-    // 5. PROMO DISCOUNT VERIFICATION
-    // --------------------------------------------------------------------------
-    let discount = 0;
-    if (promoCode === "NOVA20") {
-      discount = +(verifiedSubtotal * 0.2).toFixed(2);
-    } else if (promoCode === "WELCOME10") {
-      discount = +(verifiedSubtotal * 0.1).toFixed(2);
-    }
-
-    // --------------------------------------------------------------------------
-    // 6. TAX (8%) & FINAL VERIFIED TOTAL
-    // --------------------------------------------------------------------------
-    const taxableSubtotal = Math.max(0, verifiedSubtotal - discount);
-    const tax = +(taxableSubtotal * 0.08).toFixed(2);
-    const verifiedTotal = +(taxableSubtotal + shippingPrice + tax).toFixed(2);
-
-    // --------------------------------------------------------------------------
-    // 7. ORDER CODE GENERATION & RECORD LOGGING
-    // --------------------------------------------------------------------------
-    const orderNumber = `NV-${Math.floor(1000 + Math.random() * 9000)}`;
-    const trackingNumber = `TRK-NV-${Math.floor(100000 + Math.random() * 900000)}`;
-    const deliveryDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-
-    const paymentInfoRecord: PaymentInfo = {
-      method: paymentMethod,
-      cardBrand: paymentMethod === "card" ? "Visa" : undefined,
-      cardLast4: paymentMethod === "card" ? "4242" : undefined,
-      cardHolder: address.fullName,
-    };
-
-    const newOrder: Order = {
-      id: `ord-${Date.now()}`,
-      orderNumber,
-      trackingNumber,
-      date: new Date().toISOString().split("T")[0],
-      items: verifiedOrderItems,
-      subtotal: verifiedSubtotal,
-      discount,
-      shipping: shippingPrice,
-      shippingTier: shippingTierRecord,
-      paymentInfo: paymentInfoRecord,
-      tax,
-      total: verifiedTotal,
-      status: "Processing",
-      shippingAddress: address,
-      estimatedDelivery: deliveryDate,
-    };
-
-    // Save in server database memory
-    SERVER_ORDERS_DATABASE.unshift(newOrder);
-
-    // --------------------------------------------------------------------------
-    // 8. RETURN HTTP 201 CREATED
+    // 4. RETURN HTTP 201 CREATED
     // --------------------------------------------------------------------------
     return NextResponse.json(
       {
         success: true,
-        message: "Order successfully authorized and created on the backend.",
-        order: newOrder,
+        message: "Order successfully authorized and recorded in database.",
+        order: result.order,
       },
       {
         status: 201,
@@ -261,19 +129,18 @@ export async function GET(request: NextRequest) {
     const email = searchParams.get("email")?.toLowerCase().trim();
 
     if (!email) {
+      const allOrders = await db.order.findMany();
       return NextResponse.json(
         {
           success: true,
-          count: SERVER_ORDERS_DATABASE.length,
-          orders: SERVER_ORDERS_DATABASE,
+          count: allOrders.length,
+          orders: allOrders,
         },
         { status: 200 }
       );
     }
 
-    const userOrders = SERVER_ORDERS_DATABASE.filter(
-      (o) => o.shippingAddress.email.toLowerCase() === email
-    );
+    const userOrders = await db.order.findManyByEmail(email);
 
     return NextResponse.json(
       {
@@ -286,7 +153,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Error in GET /api/orders:", error);
     return NextResponse.json(
-      { success: false, error: "Internal Server Error fetching orders." },
+      { success: false, error: "Internal Server Error fetching orders from database." },
       { status: 500 }
     );
   }

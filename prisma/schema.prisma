@@ -1,0 +1,265 @@
+// ==============================================================================
+// FILE: prisma/schema.prisma
+// ARCHITECTURE ROLE: PostgreSQL Database Schema Definition & Prisma ORM Blueprint
+//
+// 🎓 BEGINNER'S GUIDE TO PRISMA & RELATIONAL DATABASES:
+//   What is Prisma?
+//     Prisma is a "Next-Generation ORM" (Object-Relational Mapping) tool for Node.js & TypeScript.
+//     Instead of writing raw, error-prone SQL queries like:
+//       "SELECT * FROM products WHERE price < 100;"
+//     Prisma generates a strictly-typed TypeScript client so you can write:
+//       await prisma.product.findMany({ where: { price: { lt: 100 } } });
+//     with 100% type safety and instant autocomplete in your editor!
+//
+//   Key Relational Concepts in this Schema:
+//     1. `@id @default(cuid())`:
+//        Every table needs a Primary Key to uniquely identify a record.
+//        `cuid()` generates collision-resistant unique IDs (e.g. "clg3n0...") safe for distributed scale.
+//     2. `@unique`:
+//        Ensures no two records have the same value (e.g. product `slug`, user `email`, `orderNumber`).
+//     3. Relations (`@relation`):
+//        • Category has MANY Products (1-to-N).
+//        • Product belongs to ONE Category (N-to-1).
+//        • Order has MANY OrderItems (1-to-N).
+//        • Order belongs to ONE User and has ONE delivery Address.
+//     4. Enums:
+//        Restricts column values to a specific set of choices (e.g., OrderStatus: "Processing" | "Shipped" | "Delivered").
+// ==============================================================================
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ------------------------------------------------------------------------------
+// ENUMS: Strict domain choices enforced at the database engine level
+// ------------------------------------------------------------------------------
+enum OrderStatus {
+  Processing
+  Shipped
+  Delivered
+  Cancelled
+}
+
+enum ShippingTierType {
+  standard
+  express
+  overnight
+}
+
+enum PaymentMethodType {
+  card
+  apple_pay
+  paypal
+}
+
+enum MemberTier {
+  Guest
+  Member
+  Gold_VIP
+}
+
+// ------------------------------------------------------------------------------
+// MODEL: Category
+// Represents a store department (Audio & Tech, Wearables, Smart Home, Accessories)
+// ------------------------------------------------------------------------------
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  itemCount   Int       @default(0)
+  gradient    String    // Tailwind CSS styling string for UI banners
+  description String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relational link: One category contains many products
+  products    Product[]
+
+  @@map("categories")
+}
+
+// ------------------------------------------------------------------------------
+// MODEL: Product
+// Master hardware item in the catalog with specifications, reviews, and inventory
+// ------------------------------------------------------------------------------
+model Product {
+  id            String         @id @default(cuid())
+  slug          String         @unique
+  name          String
+  price         Float
+  originalPrice Float?         // Optional MSRP price before discount
+  rating        Float          @default(5.0)
+  reviewCount   Int            @default(0)
+  icon          String         // Visual emoji/symbol
+  imageBg       String         // Tailwind gradient background
+  description   String
+  features      String[]       // Array of feature bullet points
+  specs         Json           // Key-value JSON map for technical specifications
+  tag           String?        // e.g. "BEST SELLER"
+  badge         String?        // e.g. "SAVE $50"
+  inStock       Boolean        @default(true)
+  stockCount    Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  // Relational Foreign Key: Each product belongs to a single Category
+  categoryId    String
+  category      Category       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  // Relational links
+  colorVariants ColorVariant[]
+  reviews       Review[]
+  orderItems    OrderItem[]
+
+  @@index([slug])
+  @@index([categoryId])
+  @@map("products")
+}
+
+// ------------------------------------------------------------------------------
+// MODEL: ColorVariant
+// Selectable hardware finish / color option for a product
+// ------------------------------------------------------------------------------
+model ColorVariant {
+  id        String   @id @default(cuid())
+  name      String   // e.g. "Space Black", "Titanium Silver"
+  hex       String   // e.g. "#0f172a"
+  bgClass   String   // e.g. "bg-slate-900"
+
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("color_variants")
+}
+
+// ------------------------------------------------------------------------------
+// MODEL: Review
+// Verified customer review and feedback record
+// ------------------------------------------------------------------------------
+model Review {
+  id               String   @id @default(cuid())
+  author           String
+  avatar           String?  // Reviewer initials
+  rating           Int      // 1 to 5 stars
+  date             String
+  title            String
+  comment          String
+  verifiedPurchase Boolean  @default(true)
+  helpfulCount     Int      @default(0)
+  createdAt        DateTime @default(now())
+
+  productId        String
+  product          Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("reviews")
+}
+
+// ------------------------------------------------------------------------------
+// MODEL: User
+// Registered customer profile with loyalty tier and order history
+// ------------------------------------------------------------------------------
+model User {
+  id         String     @id @default(cuid())
+  name       String
+  email      String     @unique
+  memberTier MemberTier @default(Member)
+  joinedDate String
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  // Relational links
+  orders     Order[]
+  addresses  Address[]
+
+  @@index([email])
+  @@map("users")
+}
+
+// ------------------------------------------------------------------------------
+// MODEL: Address
+// Customer delivery destination
+// ------------------------------------------------------------------------------
+model Address {
+  id            String   @id @default(cuid())
+  fullName      String
+  email         String
+  streetAddress String
+  city          String
+  postalCode    String
+  phoneNumber   String
+  createdAt     DateTime @default(now())
+
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  orders        Order[]
+
+  @@map("addresses")
+}
+
+// ------------------------------------------------------------------------------
+// MODEL: Order
+// Placed customer purchase order, financial invoice, and tracking record
+// ------------------------------------------------------------------------------
+model Order {
+  id                String            @id @default(cuid())
+  orderNumber       String            @unique // e.g. "NV-7842"
+  trackingNumber    String            @unique // e.g. "TRK-NV-849201"
+  date              String            // e.g. "2026-11-02"
+  subtotal          Float
+  discount          Float             @default(0)
+  shipping          Float             @default(0)
+  tax               Float             @default(0)
+  total             Float
+  status            OrderStatus       @default(Processing)
+  estimatedDelivery String
+  shippingTier      ShippingTierType  @default(standard)
+  paymentMethod     PaymentMethodType @default(card)
+  cardLast4         String?           // Masked last 4 digits e.g. "4242"
+  cardBrand         String?           // e.g. "Visa"
+  cardHolder        String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  // Relational Foreign Key links
+  userId            String?
+  user              User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  addressId         String
+  shippingAddress   Address           @relation(fields: [addressId], references: [id])
+
+  items             OrderItem[]
+
+  @@index([orderNumber])
+  @@index([trackingNumber])
+  @@index([userId])
+  @@map("orders")
+}
+
+// ------------------------------------------------------------------------------
+// MODEL: OrderItem
+// Line item inside an order invoice (snapshot of price at moment of purchase)
+// ------------------------------------------------------------------------------
+model OrderItem {
+  id            String   @id @default(cuid())
+  quantity      Int      @default(1)
+  unitPrice     Float    // Immutable price paid at moment of purchase
+  selectedColor String?
+
+  orderId       String
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId     String
+  product       Product  @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
