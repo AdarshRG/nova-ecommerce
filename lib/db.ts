@@ -302,5 +302,21 @@ export const db = {
     async findMany(): Promise<Order[]> {
       return [...inMemoryOrders];
     },
+
+    /**
+     * Updates an order's fulfillment and payment status (called by Stripe Webhook)
+     */
+    async updateStatus(
+      orderNumber: string,
+      status: OrderStatus
+    ): Promise<{ success: boolean; order?: Order; error?: string }> {
+      const clean = orderNumber.toUpperCase().trim();
+      const order = inMemoryOrders.find((o) => o.orderNumber === clean);
+      if (!order) {
+        return { success: false, error: `Order ${orderNumber} not found.` };
+      }
+      order.status = status;
+      return { success: true, order };
+    },
   },
 };

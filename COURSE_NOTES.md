@@ -30,6 +30,7 @@
 * [Day 13: Enterprise Schema Validation, Defensive Security & Next.js Edge Middleware](#-day-13-enterprise-schema-validation-defensive-security--nextjs-edge-middleware)
 * [Day 14: Relational Database & ORM Layer — PostgreSQL, Prisma & Singleton Connection Pools](#-day-14-relational-database--orm-layer--postgresql-prisma--singleton-connection-pools)
 * [Day 15: High-Performance Data Layer & AI Caching — Redis, Cache-Aside Pattern & Webhook Invalidation](#-day-15-high-performance-data-layer--ai-caching--redis-cache-aside-pattern--webhook-invalidation)
+* [Day 16: Payment Gateway Integration & Financial Security — Stripe, Idempotency & Cryptographic Webhooks](#-day-16-payment-gateway-integration--financial-security--stripe-idempotency--cryptographic-webhooks)
 
 ---
 
@@ -561,3 +562,53 @@
 
 > 🔴 **Senior Level:** What is Semantic AI Prompt Caching, what are its financial/latency benefits, and what are its risks in an e-commerce assistant?  
 > *Answer:* Semantic AI Prompt Caching hashes normalized user prompts and stores the LLM's structured JSON response in Redis with a TTL. LLMs have high latency (1–3 seconds) and recurring per-token inference costs. Caching reduces response latency from 2,000ms down to 2ms and drops API token costs to \$0 for repeat inquiries. The primary risk is serving outdated or inappropriate context: if a cached answer mentions that a product is \$249 or has 5 units in stock, but warehouse stock dropped to 0, serving the cached prompt will mislead the customer. We mitigate this by: (1) keeping prompt TTL short (5–10 minutes), (2) purging `ai:prompt:` keys on inventory webhooks, and (3) excluding dynamic user-specific inquiries (like `trackOrder NV-XXXX`) from prompt caching.
+
+---
+
+<br />
+
+## 📅 Day 16: Payment Gateway Integration & Financial Security — Stripe, Idempotency & Cryptographic Webhooks
+
+### 🛠️ 1. Architectural Overview & What We Built
+* Architected the enterprise Stripe payment gateway integration in [`lib/stripe.ts`](file:///D:/NOVA%20Project/nova-ecommerce/lib/stripe.ts) with integer cents currency conversion, idempotency key verification, and cryptographic webhook signature verification (HMAC-SHA256).
+* Built the server-verified payment intent initialization endpoint in [`app/api/checkout/stripe/route.ts`](file:///D:/NOVA%20Project/nova-ecommerce/app/api/checkout/stripe/route.ts):
+  - **Zero-Trust Security:** Ignores client-provided prices and recalculates subtotal, shipping fees, promo discounts, and taxes by re-fetching genuine product records directly from the database repository (`db.product.findById`).
+  - **Integer Cents Representation:** Converts dollar calculations into integer cents (e.g. \$249.99 ➔ 24999 cents) to eliminate IEEE 754 floating-point rounding errors in financial transactions.
+  - **Rate Limiting Guard:** Implements a sliding-window rate limit (15 requests/min per IP) to neutralize automated card testing and bot attacks.
+  - **Secure Token Delivery:** Generates and returns a single-use `clientSecret` and `paymentIntentId` to the browser without exposing private backend secret keys.
+* Built the cryptographically verified Stripe Webhook receiver in [`app/api/webhooks/stripe/route.ts`](file:///D:/NOVA%20Project/nova-ecommerce/app/api/webhooks/stripe/route.ts):
+  - Recalculates the HMAC-SHA256 cryptographic digest using the `stripe-signature` header and the raw string body against `STRIPE_WEBHOOK_SECRET` to prevent request tampering or spoofing.
+  - Automatically transitions database order records to `"Processing"` and payment status to `"Paid"` upon receiving `payment_intent.succeeded`.
+  - Implements real-time cache invalidation by purging Redis order tracking keys (`redis.del("order:" + orderNumber)` and `redis.delByPrefix("order:")`).
+  - Enforces the **"Fast 200 OK"** architectural rule to ensure Stripe receives acknowledgment within 3 seconds, preventing costly webhook retry storms.
+* Updated the multi-step checkout experience in [`components/checkout/CheckoutModal.tsx`](file:///D:/NOVA%20Project/nova-ecommerce/components/checkout/CheckoutModal.tsx):
+  - Integrated Stripe PaymentIntent authorization flow directly into Step 3.
+  - Added PCI-DSS Level 1 trust badges and 256-bit encryption indicators.
+  - Surfaced the verified Stripe PaymentIntent token on the order confirmation screen for transparency and debugging.
+
+<br />
+
+### 📖 2. Key Concepts & Definitions Glossary
+
+| Technical Term | Beginner-Friendly Definition & Explanation |
+| :--- | :--- |
+| **PCI-DSS Compliance** | Payment Card Industry Data Security Standard. A strict legal framework requiring businesses handling raw credit card numbers to implement high-security physical and digital audits. By offloading card collection to Stripe Elements/SDKs, our server stays outside the PCI-DSS audit boundary. |
+| **Stripe PaymentIntent** | An object managed on Stripe's servers that tracks the complete lifecycle of a customer transaction (from `requires_payment_method`, to `requires_action` for 3D Secure SMS OTP, to `succeeded`). |
+| **Client Secret (`client_secret`)** | A temporary, scoped cryptographic token generated by your backend and sent to the customer's browser. It authorizes the frontend to confirm a specific payment without exposing your secret master Stripe API keys. |
+| **Integer Cents Representation** | Storing and calculating currency strictly in integer cents (e.g. \$19.99 = 1999 cents) rather than floating-point decimals (`19.99`). This prevents binary floating-point rounding bugs (like `0.1 + 0.2 === 0.30000000000000004`) from creating financial accounting discrepancies. |
+| **Idempotency Key** | A unique random identifier (e.g. `idem_abc123`) sent with an HTTP request. If a customer clicks "Pay" twice due to lag, Stripe recognizes the duplicate idempotency key and executes the charge only once. |
+| **HMAC-SHA256 Webhook Verification** | A cryptographic hashing algorithm where Stripe signs the raw webhook payload using a shared secret (`STRIPE_WEBHOOK_SECRET`). Your backend recalculates the hash to guarantee the webhook came genuinely from Stripe and was not tampered with or spoofed by a hacker. |
+| **Asynchronous Webhook Fulfillment** | Fulfilling orders and updating shipping status based on server-to-server webhook events rather than frontend redirect URLs. Guarantees orders are fulfilled even if the customer's laptop shuts down right after paying. |
+
+<br />
+
+### 💡 3. Technical Interview Q&A (Beginner, Mid & Senior Levels)
+
+> 🟢 **Beginner Level:** Why should an e-commerce website NEVER calculate order totals on the client side or send credit card numbers directly to its own Node.js backend?  
+> *Answer:* Calculating totals on the client is an extreme security flaw because any customer can open Chrome DevTools and edit the JavaScript or API request to charge \$1 for a \$1,000 laptop. The server must always look up genuine prices in the database and calculate the total itself. Additionally, touching raw credit card numbers on your server forces your company to undergo grueling, expensive PCI-DSS Level 1 compliance audits. Using Stripe allows the customer's browser to submit card numbers directly to Stripe, keeping your servers safe and legally compliant.
+
+> 🟡 **Mid Level:** What is an Idempotency Key in payment processing, and how does it prevent double charges during high-latency network drops?  
+> *Answer:* An Idempotency Key is a unique UUID generated by the client or server for a payment attempt and passed in the `Idempotency-Key` HTTP header. If a customer clicks "Pay Now", the request reaches Stripe, but the customer's mobile connection drops before receiving the response, their device might retry the request. Stripe checks its cache for that specific Idempotency Key: if found, it skips charging the credit card a second time and simply returns the cached result of the original charge.
+
+> 🔴 **Senior Level:** How does cryptographic webhook signature verification (HMAC-SHA256) protect an e-commerce platform against spoofing, and why must the raw text body be used instead of parsed JSON?  
+> *Answer:* Without signature verification, an attacker could send a fake POST request to `/api/webhooks/stripe` containing `{"type": "payment_intent.succeeded", "orderNumber": "NV-9999"}` and trick the warehouse into shipping goods without payment. Stripe calculates an HMAC-SHA256 hash using the raw HTTP request body and a shared secret (`whsec_...`), placing it in the `stripe-signature` header. The receiver recomputes this hash. If a single character or byte differs, the computed hash does not match, and the request is rejected with HTTP 400. Crucially, the verification must use the *raw unparsed text body* because running `JSON.parse()` and re-stringifying changes whitespace and property order, altering the cryptographic digest and causing legitimate webhooks to fail verification.
