@@ -1,0 +1,44 @@
+# ==============================================================================
+# FILE: .dockerignore
+# ARCHITECTURE ROLE: Docker Context Filtering & Secret Protection
+#
+# 🎓 BEGINNER'S GUIDE TO .dockerignore:
+#   What does this file do?
+#     When you run `docker build .`, Docker packages the current folder and uploads
+#     it into the Docker Daemon (called the "Build Context").
+#     If you don't ignore files:
+#       1. Your build upload will be slow because it sends hundreds of megabytes of `node_modules`.
+#       2. You might accidentally bake private `.env.local` API keys or passwords into public images!
+#     This file tells Docker: "DO NOT copy these files or folders into the container."
+# ==============================================================================
+
+# Dependencies (Installed fresh inside the Linux container)
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Next.js build output (Rebuilt cleanly inside the container)
+.next
+out
+
+# Git version control files
+.git
+.gitignore
+
+# Environment files containing local secrets
+.env*.local
+.env.development
+.env.test
+
+# IDE and OS metadata files
+.vscode
+.idea
+.DS_Store
+*.pem
+
+# Docker configuration files
+Dockerfile*
+docker-compose*.yml
+.dockerignore

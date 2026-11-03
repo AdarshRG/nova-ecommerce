@@ -1,0 +1,114 @@
+# ==============================================================================
+# FILE: docker-compose.yml
+# ARCHITECTURE ROLE: Enterprise Multi-Container Orchestration (Next.js + PostgreSQL + Redis)
+#
+# 🎓 BEGINNER'S GUIDE TO DOCKER COMPOSE:
+#   1. What is Docker Compose?
+#      While a `Dockerfile` builds a single container image, real-world full-stack applications
+#      rely on multiple independent services working in harmony (App Server + Database + Cache).
+#      `docker-compose.yml` acts as the conductor of an orchestra: with ONE command
+#      (`docker compose up -d`), it creates a virtual private network, spins up PostgreSQL,
+#      boots Redis, builds your Next.js app, and wires them together automatically!
+#
+#   2. Key Concepts:
+#      • `services`: The individual micro-applications running in isolated containers.
+#      • `networks`: An internal virtual switchboard. Containers talk to each other via service
+#        names (e.g. `redis:6379` or `postgres:5432`) rather than hardcoded IP addresses.
+#      • `volumes`: Permanent storage folders on your physical computer. Without volumes,
+#        every time you stop a database container, all your customer orders and products
+#        would vanish forever! Volumes ensure data is preserved across restarts.
+#      • `depends_on`: Ensures services boot in the right order (Next.js waits for PostgreSQL & Redis).
+# ==============================================================================
+
+version: "3.8"
+
+services:
+  # ----------------------------------------------------------------------------
+  # SERVICE 1: Next.js 16 Full-Stack Storefront & AI Application Server
+  # ----------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nova_storefront_app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      # Internal network addresses pointing to peer containers
+      - DATABASE_URL=postgresql://nova_admin:nova_secure_pass_2026@postgres:5432/nova_db?schema=public
+      - REDIS_URL=redis://redis:6379
+      - NEXT_PUBLIC_STORE_NAME=NOVA Storefront
+      - STRIPE_SECRET_KEY=sk_test_mock_nova_stripe_2026
+      - STRIPE_WEBHOOK_SECRET=whsec_mock_nova_webhook_2026
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - nova-network
+
+  # ----------------------------------------------------------------------------
+  # SERVICE 2: PostgreSQL 16 Relational Database Engine
+  # ----------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: nova_postgres_db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: nova_admin
+      POSTGRES_PASSWORD: nova_secure_pass_2026
+      POSTGRES_DB: nova_db
+    volumes:
+      # Named volume guarantees persistent storage across container rebuilds
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nova_admin -d nova_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nova-network
+
+  # ----------------------------------------------------------------------------
+  # SERVICE 3: Redis 7 In-Memory Cache & Semantic AI Prompt Acceleration
+  # ----------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: nova_redis_cache
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ""
+    ports:
+      - "6379:6379"
+    volumes:
+      # Preserves appendonly disk log across cache restarts
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nova-network
+
+# ------------------------------------------------------------------------------
+# VOLUMES: Persistent Disk Storage
+# ------------------------------------------------------------------------------
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+# ------------------------------------------------------------------------------
+# NETWORKS: Isolated Internal Virtual Bridge Network
+# ------------------------------------------------------------------------------
+networks:
+  nova-network:
+    driver: bridge

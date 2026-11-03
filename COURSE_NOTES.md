@@ -31,6 +31,7 @@
 * [Day 14: Relational Database & ORM Layer — PostgreSQL, Prisma & Singleton Connection Pools](#-day-14-relational-database--orm-layer--postgresql-prisma--singleton-connection-pools)
 * [Day 15: High-Performance Data Layer & AI Caching — Redis, Cache-Aside Pattern & Webhook Invalidation](#-day-15-high-performance-data-layer--ai-caching--redis-cache-aside-pattern--webhook-invalidation)
 * [Day 16: Payment Gateway Integration & Financial Security — Stripe, Idempotency & Cryptographic Webhooks](#-day-16-payment-gateway-integration--financial-security--stripe-idempotency--cryptographic-webhooks)
+* [Day 17: Containerization & Cloud Infrastructure — Docker, Multi-Stage Builds, Docker Compose & Health Probes](#-day-17-containerization--cloud-infrastructure--docker-multi-stage-builds-docker-compose--health-probes)
 
 ---
 
@@ -612,3 +613,54 @@
 
 > 🔴 **Senior Level:** How does cryptographic webhook signature verification (HMAC-SHA256) protect an e-commerce platform against spoofing, and why must the raw text body be used instead of parsed JSON?  
 > *Answer:* Without signature verification, an attacker could send a fake POST request to `/api/webhooks/stripe` containing `{"type": "payment_intent.succeeded", "orderNumber": "NV-9999"}` and trick the warehouse into shipping goods without payment. Stripe calculates an HMAC-SHA256 hash using the raw HTTP request body and a shared secret (`whsec_...`), placing it in the `stripe-signature` header. The receiver recomputes this hash. If a single character or byte differs, the computed hash does not match, and the request is rejected with HTTP 400. Crucially, the verification must use the *raw unparsed text body* because running `JSON.parse()` and re-stringifying changes whitespace and property order, altering the cryptographic digest and causing legitimate webhooks to fail verification.
+
+---
+
+<br />
+
+## 📅 Day 17: Containerization & Cloud Infrastructure — Docker, Multi-Stage Builds, Docker Compose & Health Probes
+
+### 🛠️ 1. Architectural Overview & What We Built
+* Upgraded [`next.config.ts`](file:///D:/NOVA%20Project/nova-ecommerce/next.config.ts) with `output: "standalone"` to activate Next.js automated dependency tracing, reducing the final deployment bundle from 1.2GB down to under 120MB.
+* Authored [`.dockerignore`](file:///D:/NOVA%20Project/nova-ecommerce/.dockerignore) to prevent leaking local environment secrets (`.env*.local`) and prevent uploading bloated `node_modules` into the Docker build context.
+* Engineered the 4-stage production [`Dockerfile`](file:///D:/NOVA%20Project/nova-ecommerce/Dockerfile) (`base` ➔ `deps` ➔ `builder` ➔ `runner`):
+  - Utilizes lightweight **Alpine Linux** (`node:20-alpine`) to minimize container attack surfaces.
+  - Leverages Docker layer caching for `package.json` to skip redundant dependency installs.
+  - Enforces enterprise container security by provisioning an unprivileged system user (`nextjs:nodejs`), preventing container-breakout root privileges.
+  - Copies strictly the traced `.next/standalone` files and public assets into the minimal runner.
+* Created multi-container orchestration in [`docker-compose.yml`](file:///D:/NOVA%20Project/nova-ecommerce/docker-compose.yml):
+  - Connects the Next.js storefront (`app`), PostgreSQL 16 Alpine (`postgres`), and Redis 7 Alpine (`redis`) inside an isolated virtual bridge network (`nova-network`).
+  - Configured persistent named volumes (`postgres_data`, `redis_data`) to prevent data loss across container rebuilds.
+  - Configured automatic container health checks and startup dependency ordering (`depends_on: { condition: service_healthy }`).
+* Implemented the enterprise cloud health check probe in [`app/api/health/route.ts`](file:///D:/NOVA%20Project/nova-ecommerce/app/api/health/route.ts):
+  - Reports Node.js process uptime and detailed memory consumption (Heap Used, Heap Total, RSS).
+  - Actively probes database repository query latency and Redis ping/readiness.
+  - Returns HTTP 200 (Healthy) or HTTP 503 (Degraded), integrating seamlessly with AWS ALB, Kubernetes probes, and Docker container monitors.
+
+<br />
+
+### 📖 2. Key Concepts & Definitions Glossary
+
+| Technical Term | Beginner-Friendly Definition & Explanation |
+| :--- | :--- |
+| **Docker Image vs Container** | A Docker **Image** is a frozen, read-only blueprint containing your code, Node.js runtime, and Linux libraries. A Docker **Container** is a live, running instance instantiated from that image. |
+| **Multi-Stage Build** | A Docker pattern dividing container construction into sequential stages (`deps` ➔ `builder` ➔ `runner`). Build tools and compilers are discarded, copying only the final compiled artifact into the production container to slash image size. |
+| **Next.js Standalone (`output: "standalone"`)** | A Next.js build feature that traces all required files and modules, bundling a minimal self-contained `server.js`. Eliminates the need to copy the entire `node_modules` folder into production. |
+| **Non-Root Container Security** | Running containers under an unprivileged user (`USER nextjs`) rather than `root`. If an attacker discovers an exploit in the app, their permissions are strictly confined, preventing host server takeover. |
+| **Docker Compose** | A tool for defining and running multi-container applications using a single YAML configuration file, orchestrating microservices, networks, and persistent storage with `docker compose up`. |
+| **Named Persistent Volumes** | Dedicated storage locations on the host machine managed by Docker. Data stored in volumes persists even when containers are stopped, removed, or upgraded. |
+| **Liveness vs Readiness Probes** | A **Liveness Probe** checks if the application process is running (restarting it if dead). A **Readiness Probe** checks if downstream dependencies (PostgreSQL, Redis) are ready to accept customer traffic. |
+
+<br />
+
+### 💡 3. Technical Interview Q&A (Beginner, Mid & Senior Levels)
+
+> 🟢 **Beginner Level:** What is Docker, what is the difference between an Image and a Container, and why is containerization essential for cloud deployments?  
+> *Answer:* Docker packages an application alongside its operating system libraries, runtime (Node.js), and exact dependencies into a standardized unit. An **Image** is the immutable, compiled template (like a class or recipe), whereas a **Container** is the running instance in memory (like an instantiated object). Containerization eliminates the classic "it worked on my machine" dilemma because the exact same container runs identically on a developer's laptop, in a CI/CD test runner, or in a production cloud environment on AWS or GCP.
+
+> 🟡 **Mid Level:** Why do we use a Multi-Stage Dockerfile with Next.js `output: "standalone"` instead of a simple single-stage `npm install && npm run build`?  
+> *Answer:* A single-stage build carries all devDependencies, TypeScript compilers, build caches, and the massive `node_modules` folder (often exceeding 1.2 GB) directly into production. A Multi-Stage build separates the process: Stage 1 installs dependencies, Stage 2 compiles the project using Next.js `output: "standalone"` to trace only the strictly necessary files, and Stage 3 (Runner) starts with a fresh, clean Alpine Linux image and copies *only* the compiled standalone artifact. This shrinks the production image size from ~1.2 GB down to under 120 MB (a 90%+ reduction), resulting in significantly faster CI/CD build uploads, lower cloud bandwidth costs, and rapid auto-scaling deployments.
+
+> 🔴 **Senior Level:** In Kubernetes and AWS ECS, how do Liveness Probes differ from Readiness Probes, and how should an endpoint like `GET /api/health` handle cascading failures when Redis or PostgreSQL degrades?  
+> *Answer:* A **Liveness Probe** answers "Is the application process alive and responsive?" If it fails, the orchestrator forcefully kills and restarts the container. A **Readiness Probe** answers "Is the container ready to receive and fulfill customer requests?" If it fails, the orchestrator temporarily removes the container from the load balancer's target group without killing it, waiting for downstream systems to recover.  
+> If an endpoint conflates both into a single check that returns HTTP 500 when Redis is temporarily slow, the orchestrator will trigger a "restart loop" (CrashLoopBackOff) across all web containers simultaneously. A resilient senior architecture separates these checks or returns a degraded status (HTTP 503 for readiness, but keeps liveness alive) while logging structured telemetry, allowing traffic shedding without causing catastrophic cluster-wide container reboots.
