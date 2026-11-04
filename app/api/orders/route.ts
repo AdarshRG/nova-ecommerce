@@ -19,6 +19,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "../../../lib/db";
 import { validateOrderSubmission } from "../../../lib/validators";
 import { checkRateLimit } from "../../../lib/security";
+import { logger } from "../../../lib/logger";
+import { handleApiError } from "../../../lib/errors";
 
 /**
  * POST /api/orders
@@ -92,8 +94,16 @@ export async function POST(request: NextRequest) {
     }
 
     // --------------------------------------------------------------------------
-    // 4. RETURN HTTP 201 CREATED
+    // 4. AUDIT TELEMETRY & HTTP 201 RESPONSE
     // --------------------------------------------------------------------------
+    logger.audit("Order Created & Authorized", {
+      orderNumber: result.order.orderNumber,
+      total: result.order.total,
+      itemCount: result.order.items.length,
+      shippingTier: result.order.shippingTier.id,
+      clientIp,
+    });
+
     return NextResponse.json(
       {
         success: true,
@@ -108,14 +118,7 @@ export async function POST(request: NextRequest) {
       }
     );
   } catch (error) {
-    console.error("Error in POST /api/orders:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Internal Server Error processing order on backend.",
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, "POST /api/orders");
   }
 }
 

@@ -31,6 +31,7 @@ const testFiles = [
   path.join(projectRoot, "tests", "pricing.test.mjs"),
   path.join(projectRoot, "tests", "redis-cache.test.mjs"),
   path.join(projectRoot, "tests", "ai-chat.test.mjs"),
+  path.join(projectRoot, "tests", "observability.test.mjs"),
 ];
 
 const testStream = run({
