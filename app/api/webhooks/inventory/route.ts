@@ -20,7 +20,7 @@
 // ==============================================================================
 
 import { NextRequest, NextResponse } from "next/server";
-import { redis, cacheKeys } from "../../../lib/redis";
+import { redis, cacheKeys } from "@/lib/redis";
 
 // Webhook secret key for signature verification (stored in environment variables)
 const WEBHOOK_SECRET = process.env.INVENTORY_WEBHOOK_SECRET || "nova_inventory_secret_2026";

@@ -26,9 +26,9 @@
 // ==============================================================================
 
 import { NextRequest, NextResponse } from "next/server";
-import { stripe } from "../../../lib/stripe";
-import { db } from "../../../lib/db";
-import { redis } from "../../../lib/redis";
+import { stripe } from "@/lib/stripe";
+import { db } from "@/lib/db";
+import { redis } from "@/lib/redis";
 
 /**
  * POST /api/webhooks/stripe

@@ -25,9 +25,9 @@
 // ==============================================================================
 
 import { NextRequest, NextResponse } from "next/server";
-import { stripe } from "../../../lib/stripe";
-import { db } from "../../../lib/db";
-import { checkRateLimit } from "../../../lib/security";
+import { stripe } from "@/lib/stripe";
+import { db } from "@/lib/db";
+import { checkRateLimit } from "@/lib/security";
 
 interface CheckoutRequestBody {
   items: Array<{

@@ -25,7 +25,7 @@
 
 import { PRODUCTS, CATEGORIES, getProductBySlug } from "../data/products";
 import { Product, Category } from "../types/product";
-import { Order, ShippingTier, PaymentInfo } from "../types/auth";
+import { Order, ShippingTier, PaymentInfo, OrderStatus } from "../types/auth";
 
 // ------------------------------------------------------------------------------
 // 1. PRISMA CLIENT SINGLETON PATTERN

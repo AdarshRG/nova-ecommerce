@@ -131,6 +131,13 @@ class RedisClient {
       hitRatio: ratio,
     };
   }
+
+  /**
+   * Alias for getMetrics() for health checks and telemetry probes
+   */
+  getStats(): CacheMetrics {
+    return this.getMetrics();
+  }
 }
 
 // Global Singleton to preserve cache during Next.js Hot Module Reloading (HMR)
