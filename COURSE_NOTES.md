@@ -17,7 +17,7 @@
 ## 📑 Table of Contents (Day-by-Day Reference)
 
 * [Day 1 & Day 2: Next.js 16 App Router, Dynamic SSG & Global State](#-day-1--day-2-nextjs-16-app-router-dynamic-ssg--global-state)
-* [Day 3: Enterprise Storefront UI, MSRP Discounts & LocalStorage Persistence](#-day-3-enterprise-storefront-ui-msrp-discounts--localstorage-persistence)
+* [Day 3: Enterprise Storefront UI, MSRP Discounts & LocalStorage Persistence]  (#-day-3-enterprise-storefront-ui-msrp-discounts--localstorage-persistence)
 * [Day 4: Persistent Wishlist Drawer & Checkout Address Validation](#-day-4-persistent-wishlist-drawer--checkout-address-validation)
 * [Day 5: Verified Customer Reviews System & Command-K Quick Search](#-day-5-verified-customer-reviews-system--command-k-quick-search)
 * [Day 6: Dynamic Category Routes & Multi-Product Comparison Matrix](#-day-6-dynamic-category-routes--multi-product-comparison-matrix)
