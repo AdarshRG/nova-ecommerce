@@ -1,0 +1,103 @@
+# ==============================================================================
+# FILE: .github/workflows/ci.yml
+# ARCHITECTURE ROLE: Enterprise GitHub Actions CI/CD Quality Gate & Automated Verification
+#
+# 🎓 BEGINNER'S GUIDE TO CI/CD (CONTINUOUS INTEGRATION / CONTINUOUS DEPLOYMENT):
+#   1. What is CI/CD?
+#      CI (Continuous Integration) is an automated robot that tests every pull request (PR).
+#      Before any code is allowed into the `main` production branch, this robot:
+#        • Spawns a clean cloud virtual machine (Ubuntu Linux).
+#        • Installs project dependencies.
+#        • Checks for code style and syntax issues (`npm run lint`).
+#        • Checks that all TypeScript types are 100% sound (`npm run typecheck`).
+#        • Runs all unit and integration test suites (`npm test`).
+#        • Compiles the Next.js production build (`npm run build`).
+#        • Verifies that the Docker container builds without errors!
+#
+#   2. Why is this critical in production engineering?
+#      Without CI, if someone introduces a typo in checkout math or breaks a TypeScript type,
+#      it gets merged to `main` and immediately breaks the live website for thousands of customers.
+#      CI acts as an impenetrable quality gate: if ANY step fails, GitHub blocks the merge!
+# ==============================================================================
+
+name: NOVA CI/CD Quality Pipeline
+
+# Triggers workflow whenever code is pushed to main or a Pull Request is opened
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ----------------------------------------------------------------------------
+  # JOB 1: Automated Quality Gates, Tests & Next.js Build
+  # ----------------------------------------------------------------------------
+  quality-gate:
+    name: Lint, Typecheck & Automated Test Suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # Step 1: Clones the repository code into the cloud runner VM
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      # Step 2: Installs Node.js 20 with npm package caching for rapid execution
+      - name: Set Up Node.js 20 Runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      # Step 3: Installs exact dependencies (npm ci guarantees identical lockfile packages)
+      - name: Install Project Dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      # Step 4: Runs ESLint to enforce coding standards and catch bad practices
+      - name: Run Static Code Analysis (ESLint)
+        run: npm run lint
+
+      # Step 5: Validates that all TypeScript types, interfaces, and generics compile
+      - name: TypeScript Type Check (No Emit)
+        run: npm run typecheck
+
+      # Step 6: Executes all unit and integration test suites (Stripe, Validators, Pricing, Redis)
+      - name: Execute Automated Unit & Integration Tests
+        run: npm test
+
+      # Step 7: Compiles the Next.js 16 production build with output: standalone
+      - name: Build Next.js Production Bundle
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+          NODE_ENV: production
+          NEXT_PUBLIC_STORE_NAME: "NOVA Storefront"
+
+  # ----------------------------------------------------------------------------
+  # JOB 2: Docker Container Build Verification
+  # ----------------------------------------------------------------------------
+  docker-verification:
+    name: Multi-Stage Docker Build Verification
+    needs: quality-gate # Only runs if tests and linting pass
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Verifies that our 4-stage Dockerfile builds cleanly into a production container
+      - name: Build Production Docker Image
+        run: |
+          docker build \
+            --tag nova-storefront:ci-test \
+            --file Dockerfile .
